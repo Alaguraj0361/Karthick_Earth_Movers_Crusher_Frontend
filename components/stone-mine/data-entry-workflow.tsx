@@ -195,8 +195,8 @@ const workflowData: WorkflowSection[] = [
                     { name: 'Diesel / Fuel', tamil: 'டீசல் அளவு மற்றும் தொகை (வண்டி வாரியாக)', required: true },
                     { name: 'Machine Maintenance', tamil: 'இயந்திர பராமரிப்பு செலவுகள்', required: true },
                     { name: 'Office & Misc', tamil: 'அலுவலக மற்றும் இதர செலவுகள்', required: true },
-                    { name: 'Police Expense', tamil: 'போலீஸ் மற்றும் ஸ்டேஷன் செலவுகள்', required: true },
-                    { name: 'Vendor Other Expenses', tamil: 'வெளி வாகன ஒப்பந்ததாரர்களின் இதர செலவுகள்', required: false },
+                    { name: 'Crusher Maintenance', tamil: 'கிரஷர் மெஷின் பராமரிப்பு செலவுகள்', required: true },
+                    { name: 'Screen & Conveyor Repair', tamil: 'ஸ்கிரீன் மற்றும் கன்வேயர் பழுது செலவுகள்', required: true },
                 ],
                 tips: [
                     'டீசல் பதிவின் போது வண்டியை சரியாக தேர்வு செய்யவும், இது வண்டி வாரியான மைலேஜ் பார்க்க உதவும்.',
@@ -218,16 +218,14 @@ const workflowData: WorkflowSection[] = [
         steps: [
             {
                 stepNo: 1,
-                titleTamil: 'பெர்மிட் மற்றும் டிரிப் பதிவு',
-                titleEnglish: 'Permit & Trip Management',
-                descriptionTamil: 'அனுமதி சீட்டுகள் மற்றும் வாகனங்களின் ஒவ்வொரு லோடையும் பதிவு செய்யவும்.',
+                titleTamil: 'டிரிப் பதிவு',
+                titleEnglish: 'Trip Management',
+                descriptionTamil: 'வாகனங்களின் ஒவ்வொரு லோடையும் பதிவு செய்யவும்.',
                 fields: [
-                    { name: 'Permit Management', tamil: 'அனுமதி சீட்டு விவரங்கள் (Permits)', required: true },
                     { name: 'Vehicle Trip Management', tamil: 'தினசரி டிரிப் பதிவுகள்', required: true },
                 ],
                 tips: [
                     'ஒவ்வொரு டிரிப்பையும் விற்பனையாக (Sale) மாற்ற டிரிப் லிஸ்டில் உள்ள பட்டனை பயன்படுத்தவும்.',
-                    'பெர்மிட் முடிந்தால் அது தானாகவே உங்களுக்கு உணர்த்தப்படும்.',
                 ],
             },
             {

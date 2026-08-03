@@ -31,7 +31,7 @@ const DriverPaymentManagement = () => {
         tripId: '',
         vehicleType: '',
         driverName: '',
-        paymentType: 'Per Trip',
+        paymentType: 'Weekly Salary',
         amount: '',
         padiKasu: '',
         advanceAmount: '',
@@ -361,9 +361,11 @@ const DriverPaymentManagement = () => {
 
                         {formData.sourceType === 'Sale' ? (
                             <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-primary font-black">Select Trip Record</label>
-                                <select name="tripId" className="form-select border-primary font-bold bg-primary/5" value={formData.tripId} onChange={handleChange} required>
-                                    <option value="">Choose Trip ID</option>
+                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-primary font-black">
+                                    Select Trip Record {formData.paymentType === 'Per Trip' && <span className="text-danger">*</span>}
+                                </label>
+                                <select name="tripId" className="form-select border-primary font-bold bg-primary/5" value={formData.tripId} onChange={handleChange} required={formData.paymentType === 'Per Trip'}>
+                                    <option value="">Choose Trip ID (Optional for Weekly/Monthly Salary)</option>
                                     {tripsByDate.map((t) => (
                                         <option key={t._id} value={t._id}>
                                             {t.vehicleId?.vehicleNumber || t.vehicleId?.registrationNumber || 'No Plate'} - {t.driverName} | {t.fromLocation} → {t.toLocation} | {t.vehicleId?.ownershipType === 'Contract' ? `(CONTRACT - ${t.vehicleId?.contractor?.name || 'Vendor'})` : '(OWN)'}
@@ -374,9 +376,11 @@ const DriverPaymentManagement = () => {
                             </div>
                         ) : (
                             <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-info font-black">Select Rental Record</label>
-                                <select name="rentalId" className="form-select border-info font-bold bg-info/5" value={formData.rentalId} onChange={handleChange} required>
-                                    <option value="">Choose Rental ID</option>
+                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-info font-black">
+                                    Select Rental Record {formData.paymentType === 'Per Trip' && <span className="text-danger">*</span>}
+                                </label>
+                                <select name="rentalId" className="form-select border-info font-bold bg-info/5" value={formData.rentalId} onChange={handleChange} required={formData.paymentType === 'Per Trip'}>
+                                    <option value="">Choose Rental ID (Optional for Weekly/Monthly Salary)</option>
                                     {rentalsByDate.map((r) => (
                                         <option key={r._id} value={r._id}>
                                             {r.vehicleId?.name} ({r.vehicleId?.vehicleNumber || r.vehicleId?.registrationNumber}) - {r.driverName} | {r.customerName} ({r.rentalType})
@@ -438,7 +442,7 @@ const DriverPaymentManagement = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Driver Name</label>
+                                    <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Driver Name <span className="text-danger">*</span></label>
                                     <select
                                         name="driverName"
                                         className={`form-select font-bold ${formData.tripId ? 'bg-[#eee] cursor-not-allowed text-black' : ''}`}
@@ -461,8 +465,12 @@ const DriverPaymentManagement = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Payment Type</label>
-                                <select name="paymentType" className="form-select" value={formData.paymentType} onChange={handleChange} required>
-                                    <option value="Per Trip">Per Trip Payment (ஒரு trip-க்கு)</option>
+                                <select name="paymentType" className="form-select font-bold text-primary" value={formData.paymentType} onChange={handleChange} required>
+                                    <option value="Weekly Salary">📅 Weekly Salary (வார சம்பளம்)</option>
+                                    <option value="Monthly Salary">📆 Monthly Salary (மாத சம்பளம்)</option>
+                                    <option value="Per Trip">🚚 Per Trip Payment (ஒரு Trip-க்கு)</option>
+                                    <option value="Bata">🍱 Bata / Allowance (படா)</option>
+                                    <option value="Advance">💸 Advance Payment (அட்வான்ஸ்)</option>
                                 </select>
                             </div>
                             <div>
@@ -477,11 +485,13 @@ const DriverPaymentManagement = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-primary font-black underline decoration-primary/20">Basic Amount (₹)</label>
+                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-primary font-black underline decoration-primary/20">
+                                    {formData.paymentType === 'Weekly Salary' ? 'Weekly Salary Amount (₹)' : formData.paymentType === 'Monthly Salary' ? 'Monthly Salary Amount (₹)' : 'Basic Amount (₹)'}
+                                </label>
                                 <input type="number" name="amount" className="form-input border-primary text-primary font-bold text-lg" value={formData.amount} onChange={handleChange} required placeholder="0" />
                             </div>
                             <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-warning font-black underline decoration-warning/20">Padi Kasu (₹)</label>
+                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-warning font-black underline decoration-warning/20">Padi Kasu / Bata (₹)</label>
                                 <input type="number" name="padiKasu" className="form-input border-warning text-warning font-bold text-lg" value={formData.padiKasu} onChange={handleChange} placeholder="0" />
                             </div>
                             <div>
@@ -490,16 +500,10 @@ const DriverPaymentManagement = () => {
                             </div>
                             <div className="md:col-span-1">
                                 <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-info font-black">
-                                    {formData.sourceType === 'Sale' ? 'No. of Trips' : (
-                                        formData.rentalId ? (
-                                            rentalsByDate.find(r => r._id === formData.rentalId)?.rentalType === 'Trip' ? 'No. of Trips' :
-                                            rentalsByDate.find(r => r._id === formData.rentalId)?.rentalType === 'Kilometer' ? 'No. of KMs' :
-                                            'No. of Days'
-                                        ) : 'Count'
-                                    )}
+                                    {formData.paymentType.includes('Salary') ? 'Weeks / Period' : (formData.sourceType === 'Sale' ? 'No. of Trips' : 'Count')}
                                 </label>
                                 <div className="flex items-center gap-2">
-                                    <input type="number" name="tripCount" className="form-input border-info text-info font-black text-lg text-center bg-[#eee] cursor-not-allowed" value={formData.tripCount} onChange={handleChange} required min="1" readOnly />
+                                    <input type="number" name="tripCount" className="form-input border-info text-info font-black text-lg text-center" value={formData.tripCount} onChange={handleChange} required min="1" readOnly={!!formData.tripId} />
                                 </div>
                             </div>
                         </div>
@@ -508,11 +512,13 @@ const DriverPaymentManagement = () => {
                             <div className="flex flex-col">
                                 <span className="text-white-dark font-bold uppercase text-xs tracking-wider">Total Payable Amount:</span>
                                 <span className="text-[10px] text-white-dark italic">
-                                    ((₹{Number(formData.amount || 0).toLocaleString()} + ₹{Number(formData.padiKasu || 0).toLocaleString()}) × {formData.tripCount} {formData.sourceType === 'Sale' ? 'trips' : 'units'}) - ₹{Number(formData.advanceAmount || 0).toLocaleString()} Adv
+                                    {formData.paymentType.includes('Salary') ? 
+                                        `(₹${Number(formData.amount || 0).toLocaleString()} Salary + ₹${Number(formData.padiKasu || 0).toLocaleString()} Bata) - ₹${Number(formData.advanceAmount || 0).toLocaleString()} Advance` : 
+                                        `((₹${Number(formData.amount || 0).toLocaleString()} + ₹${Number(formData.padiKasu || 0).toLocaleString()}) × ${formData.tripCount}) - ₹${Number(formData.advanceAmount || 0).toLocaleString()} Adv`}
                                 </span>
                             </div>
                             <span className="text-3xl font-black text-black dark:text-white-light font-mono shadow-sm text-success">
-                                ₹{(((Number(formData.amount || 0) + Number(formData.padiKasu || 0)) * Number(formData.tripCount || 1)) - Number(formData.advanceAmount || 0)).toLocaleString()}
+                                ₹{(((Number(formData.amount || 0) + Number(formData.padiKasu || 0)) * (formData.paymentType.includes('Salary') ? 1 : Number(formData.tripCount || 1))) - Number(formData.advanceAmount || 0)).toLocaleString()}
                             </span>
                         </div>
 
@@ -575,10 +581,12 @@ const DriverPaymentManagement = () => {
                                                 {pay.notes && <div className="text-[10px] text-white-dark truncate max-w-[150px]">{pay.notes}</div>}
                                             </td>
                                             <td>
-                                                <span className={`badge ${pay.paymentType === 'Monthly Salary' ? 'badge-outline-primary' :
+                                                <span className={`badge ${
+                                                    pay.paymentType === 'Weekly Salary' ? 'badge-outline-info font-bold' :
+                                                    pay.paymentType === 'Monthly Salary' ? 'badge-outline-primary font-bold' :
                                                     pay.paymentType === 'Per Trip' ? 'badge-outline-success' :
-                                                        pay.paymentType === 'Advance' ? 'badge-outline-danger' : 'badge-outline-dark'
-                                                    }`}>
+                                                    pay.paymentType === 'Advance' ? 'badge-outline-danger' : 'badge-outline-dark'
+                                                }`}>
                                                     {pay.paymentType}
                                                 </span>
                                             </td>

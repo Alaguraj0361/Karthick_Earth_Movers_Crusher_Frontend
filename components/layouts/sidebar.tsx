@@ -112,7 +112,7 @@ const Sidebar = () => {
                         <ul className="relative space-y-0.5 p-4 py-0 font-semibold">
                             <h2 className="-mx-4 mb-1 flex items-center bg-white-light/30 px-7 py-3 font-extrabold uppercase dark:bg-dark dark:bg-opacity-[0.08]">
                                 <IconMinus className="hidden h-5 w-4 flex-none" />
-                                <span>Stone Mine</span>
+                                <span>Crusher ERP</span>
                             </h2>
 
                             <li className="nav-item">
@@ -127,12 +127,32 @@ const Sidebar = () => {
                                             </Link>
                                         </li>
                                     )}
+                                    {/* Weighment Module */}
+                                    <li className="menu nav-item">
+                                        <button type="button" className={`${currentMenu === 'weighment-module' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('weighment-module')}>
+                                            <div className="flex items-center">
+                                                <IconMenuCalendar className="shrink-0 group-hover:!text-primary" />
+                                                <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">⚖️ Weighment Module</span>
+                                            </div>
+                                            <div className={currentMenu !== 'weighment-module' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                                <IconCaretDown />
+                                            </div>
+                                        </button>
+                                        <AnimateHeight duration={300} height={currentMenu === 'weighment-module' ? 'auto' : 0}>
+                                            <ul className="sub-menu text-gray-500">
+                                                <li><Link href="/weighment/new">New Weighment Entry</Link></li>
+                                                <li><Link href="/weighment/close">Close Weighment</Link></li>
+                                                <li><Link href="/weighment/register">Weighment Register</Link></li>
+                                            </ul>
+                                        </AnimateHeight>
+                                    </li>
+
                                     {/* 1. Sales & Billing */}
                                     <li className="menu nav-item">
                                         <button type="button" className={`${currentMenu === 'sales-billing' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('sales-billing')}>
                                             <div className="flex items-center">
                                                 <IconMenuContacts className="shrink-0 group-hover:!text-primary" />
-                                                <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Sales & Billing</span>
+                                                <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Sales &amp; Billing</span>
                                             </div>
 
                                             <div className={currentMenu !== 'sales-billing' ? '-rotate-90 rtl:rotate-90' : ''}>
@@ -174,6 +194,28 @@ const Sidebar = () => {
                                         </AnimateHeight>
                                     </li>
 
+                                    {/* Purchase — Raw Material */}
+                                    {isOwnerOrManager && (
+                                        <li className="menu nav-item">
+                                            <button type="button" className={`${currentMenu === 'purchase-mgmt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('purchase-mgmt')}>
+                                                <div className="flex items-center">
+                                                    <IconMenuTodo className="shrink-0 group-hover:!text-primary" />
+                                                    <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Purchase (Raw Material)</span>
+                                                </div>
+                                                <div className={currentMenu !== 'purchase-mgmt' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                                    <IconCaretDown />
+                                                </div>
+                                            </button>
+                                            <AnimateHeight duration={300} height={currentMenu === 'purchase-mgmt' ? 'auto' : 0}>
+                                                <ul className="sub-menu text-gray-500">
+                                                    <li><Link href="/masters/suppliers">Suppliers</Link></li>
+                                                    <li><Link href="/purchases">Purchase Orders</Link></li>
+                                                    <li><Link href="/purchases/inward">Inward Register</Link></li>
+                                                </ul>
+                                            </AnimateHeight>
+                                        </li>
+                                    )}
+
                                     {/* 2. Expenses */}
                                     <li className="menu nav-item">
                                         <button type="button" className={`${currentMenu === 'expense-mgmt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('expense-mgmt')}>
@@ -201,17 +243,8 @@ const Sidebar = () => {
                                                     </li>
                                                 )}
 
-                                                {/* <li>
-                                                    <Link href="/expenses/transport-charges">Transport</Link>
-                                                </li> */}
                                                 <li>
-                                                    <Link href="/expenses/office-misc">Office & Misc</Link>
-                                                </li>
-                                                <li>
-                                                    <Link href="/expenses/police">Police Expense</Link>
-                                                </li>
-                                                <li>
-                                                    <Link href="/expenses/transport-contractor">Vendor Other Expenses</Link>
+                                                    <Link href="/expenses/office-misc">Office &amp; Misc</Link>
                                                 </li>
                                             </ul>
                                         </AnimateHeight>
@@ -232,9 +265,6 @@ const Sidebar = () => {
 
                                         <AnimateHeight duration={300} height={currentMenu === 'transport-mgmt' ? 'auto' : 0}>
                                             <ul className="sub-menu text-gray-500">
-                                                <li>
-                                                    <Link href="/transport/permits">Permit Management</Link>
-                                                </li>
                                                 <li>
                                                     <Link href="/transport/trips">Vehicle Trip Management</Link>
                                                 </li>
@@ -332,7 +362,7 @@ const Sidebar = () => {
                                         <button type="button" className={`${currentMenu === 'asset-mgmt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('asset-mgmt')}>
                                             <div className="flex items-center">
                                                 <IconMenuWidgets className="shrink-0 group-hover:!text-primary" />
-                                                <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Machine & Vehicle</span>
+                                                <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Machine &amp; Vehicle</span>
                                             </div>
 
                                             <div className={currentMenu !== 'asset-mgmt' ? '-rotate-90 rtl:rotate-90' : ''}>
@@ -346,7 +376,10 @@ const Sidebar = () => {
                                                     <Link href="/assets/machines">Machine Details</Link>
                                                 </li>
                                                 <li>
-                                                    <Link href="/assets/machine-production">Machine Production</Link>
+                                                    <Link href="/crusher-production">🏗️ Crusher Production</Link>
+                                                </li>
+                                                <li>
+                                                    <Link href="/crusher-stock">📦 Crusher Stock</Link>
                                                 </li>
                                                 <li>
                                                     <Link href="/assets/vehicles">Vehicle Details</Link>
@@ -359,63 +392,7 @@ const Sidebar = () => {
                                     </li>
 
 
-                                    {/* Blasting Management */}
-                                    {isOwnerOrManager && (
-                                        <li className="menu nav-item">
-                                            <button type="button" className={`${currentMenu === 'blasting-mgmt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('blasting-mgmt')}>
-                                                <div className="flex items-center">
-                                                    <IconMenuWidgets className="shrink-0 group-hover:!text-primary" />
-                                                    <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Blasting</span>
-                                                </div>
-                                                <div className={currentMenu !== 'blasting-mgmt' ? '-rotate-90 rtl:rotate-90' : ''}>
-                                                    <IconCaretDown />
-                                                </div>
-                                            </button>
-
-                                            <AnimateHeight duration={300} height={currentMenu === 'blasting-mgmt' ? 'auto' : 0}>
-                                                <ul className="sub-menu text-gray-500">
-                                                    <li>
-                                                        <Link href="/blasting/records">Blasting Records</Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link href="/blasting/advance">Advance</Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link href="/blasting/explosive-shop">Explosive Shop</Link>
-                                                    </li>
-                                                </ul>
-                                            </AnimateHeight>
-                                        </li>
-                                    )}
-
-                                    {/* 7. Quarry Lease Management */}
-                                    {isOwnerOrManager && (
-                                        <li className="menu nav-item">
-                                            <button type="button" className={`${currentMenu === 'quarry-lease' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('quarry-lease')}>
-                                                <div className="flex items-center">
-                                                    <IconMenuPages className="shrink-0 group-hover:!text-primary" />
-                                                    <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Quarry Lease Mgmt</span>
-                                                </div>
-
-                                                <div className={currentMenu !== 'quarry-lease' ? '-rotate-90 rtl:rotate-90' : ''}>
-                                                    <IconCaretDown />
-                                                </div>
-                                            </button>
-
-                                            <AnimateHeight duration={300} height={currentMenu === 'quarry-lease' ? 'auto' : 0}>
-                                                <ul className="sub-menu text-gray-500">
-                                                    <li>
-                                                        <Link href="/quarry-lease-settlement">Lease Settlement</Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link href="/quarry-lease-expenses">Lease Expenses</Link>
-                                                    </li>
-                                                </ul>
-                                            </AnimateHeight>
-                                        </li>
-                                    )}
-
-                                    {/* Rental Management */}
+                                    {/* Rentals */}
                                     <li className="nav-item">
                                         <Link href="/rentals" className="group">
                                             <div className="flex items-center">
@@ -474,10 +451,10 @@ const Sidebar = () => {
                                             <AnimateHeight duration={300} height={currentMenu === 'masters-mgmt' ? 'auto' : 0}>
                                                 <ul className="sub-menu text-gray-500">
                                                     <li>
-                                                        <Link href="/masters/stone-types">Stone Types</Link>
+                                                        <Link href="/masters/products">Products (M-Sand, 12mm...)</Link>
                                                     </li>
                                                     <li>
-                                                        <Link href="/masters/explosive-materials">Explosive Materials</Link>
+                                                        <Link href="/masters/suppliers">Suppliers</Link>
                                                     </li>
                                                     <li>
                                                         <Link href="/masters/vehicle-categories">Vehicle Categories</Link>
