@@ -230,6 +230,12 @@ const InvoiceGeneration = ({ mode = 'invoice' }: InvoiceGenerationProps) => {
                                                 <td style={{ padding: '4px 0', color: '#888' }}>Issue Date :</td>
                                                 <td style={{ padding: '4px 0', fontWeight: 'bold', textAlign: 'right' }}>{new Date(selectedSale.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                                             </tr>
+                                            {selectedSale.entryTime && (
+                                                <tr>
+                                                    <td style={{ padding: '4px 0', color: '#888' }}>Entry Time :</td>
+                                                    <td style={{ padding: '4px 0', fontWeight: 'bold', textAlign: 'right' }}>{selectedSale.entryTime}</td>
+                                                </tr>
+                                            )}
                                             <tr>
                                                 <td style={{ padding: '4px 0', color: '#888' }}>Payment Type :</td>
                                                 <td style={{ padding: '4px 0', fontWeight: 'bold', textAlign: 'right' }}>{selectedSale.paymentType}</td>

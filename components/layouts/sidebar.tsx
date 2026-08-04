@@ -130,9 +130,15 @@ const Sidebar = () => {
                                     {/* Weighment Module */}
                                     <li className="menu nav-item">
                                         <button type="button" className={`${currentMenu === 'weighment-module' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('weighment-module')}>
-                                            <div className="flex items-center">
-                                                <IconMenuCalendar className="shrink-0 group-hover:!text-primary" />
-                                                <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">⚖️ Weighment Module</span>
+                                            <div className="flex items-center gap-2">
+                                                <svg className="w-5 h-5 shrink-0 group-hover:!text-primary text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                                                    <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/>
+                                                    <path d="M7 21h10"/>
+                                                    <path d="M12 3v18"/>
+                                                    <path d="M3 7h18"/>
+                                                </svg>
+                                                <span className="text-black ltr:pl-1 rtl:pr-1 dark:text-[#506690] dark:group-hover:text-white-dark font-semibold">Weighment</span>
                                             </div>
                                             <div className={currentMenu !== 'weighment-module' ? '-rotate-90 rtl:rotate-90' : ''}>
                                                 <IconCaretDown />
@@ -140,9 +146,10 @@ const Sidebar = () => {
                                         </button>
                                         <AnimateHeight duration={300} height={currentMenu === 'weighment-module' ? 'auto' : 0}>
                                             <ul className="sub-menu text-gray-500">
-                                                <li><Link href="/weighment/new">New Weighment Entry</Link></li>
-                                                <li><Link href="/weighment/close">Close Weighment</Link></li>
+                                                <li><Link href="/weighment/new">1st Weight Entry (முதல் எடை)</Link></li>
+                                                <li><Link href="/weighment/close">2nd Weight Entry (இரண்டாம் எடை)</Link></li>
                                                 <li><Link href="/weighment/register">Weighment Register</Link></li>
+                                                <li><Link href="/weighment/reports">Weighment Reports &amp; Analytics</Link></li>
                                             </ul>
                                         </AnimateHeight>
                                     </li>

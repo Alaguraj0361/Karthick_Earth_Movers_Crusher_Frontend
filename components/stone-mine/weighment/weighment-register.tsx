@@ -13,9 +13,17 @@ interface WeighmentSlip {
     driverName?: string;
     partyName?: string;
     material?: { name: string; unit: string };
+    firstWeighType?: string;
     grossWeight: number;
     tareWeight: number;
     netWeight: number;
+    ratePerTon?: number;
+    subtotalAmount?: number;
+    gstAmount?: number;
+    totalAmount?: number;
+    paymentType?: string;
+    paymentStatus?: string;
+    balanceAmount?: number;
     slipStatus: 'Open' | 'Closed';
     purpose: string;
     remarks?: string;
@@ -47,7 +55,6 @@ const WeighmentRegister = () => {
             const data = res.data.data || [];
             setSlips(data);
 
-            // Compute summary
             setSummary({
                 inward: data.filter((s: WeighmentSlip) => s.slipType === 'Inward' && s.slipStatus === 'Closed').reduce((a: number, s: WeighmentSlip) => a + (s.netWeight || 0), 0),
                 outward: data.filter((s: WeighmentSlip) => s.slipType === 'Outward' && s.slipStatus === 'Closed').reduce((a: number, s: WeighmentSlip) => a + (s.netWeight || 0), 0),
@@ -69,32 +76,39 @@ const WeighmentRegister = () => {
     return (
         <div className="space-y-4">
             {/* Header + Actions */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white text-lg shadow">📋</div>
                     <div>
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Weighment Register</h1>
-                        <p className="text-xs text-gray-500">All inward &amp; outward weighment slips</p>
+                        <p className="text-xs text-gray-500">2-Step Weighbridge Register — Empty & Loaded Vehicle Entries</p>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <Link href="/weighment/new" className="btn btn-success text-sm">+ New Slip</Link>
-                    <Link href="/weighment/close" className="btn btn-warning text-sm">Close Slip</Link>
+                <div className="flex gap-2 flex-wrap">
+                    <Link href="/weighment/new" className="btn btn-success text-sm font-bold">
+                        1️⃣ 1st Weight Entry (முதல் எடை)
+                    </Link>
+                    <Link href="/weighment/close" className="btn btn-amber text-sm font-bold bg-amber-500 text-white hover:bg-amber-600">
+                        2️⃣ 2nd Weight &amp; Billing (இரண்டாம் எடை)
+                    </Link>
+                    <Link href="/weighment/reports" className="btn btn-primary text-sm font-bold">
+                        📊 Reports &amp; Analytics
+                    </Link>
                 </div>
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="panel bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 border-green-200 dark:border-green-700">
-                    <p className="text-xs text-green-700 dark:text-green-400 font-medium">⬇️ Total Inward</p>
+                    <p className="text-xs text-green-700 dark:text-green-400 font-medium">⬇️ Total Inward (Closed)</p>
                     <p className="text-2xl font-black text-green-600 dark:text-green-400">{summary.inward.toFixed(3)} MT</p>
                 </div>
                 <div className="panel bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 border-orange-200 dark:border-orange-700">
-                    <p className="text-xs text-orange-700 dark:text-orange-400 font-medium">⬆️ Total Outward</p>
+                    <p className="text-xs text-orange-700 dark:text-orange-400 font-medium">⬆️ Total Outward (Closed)</p>
                     <p className="text-2xl font-black text-orange-600 dark:text-orange-400">{summary.outward.toFixed(3)} MT</p>
                 </div>
                 <div className="panel bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/30 border-yellow-200 dark:border-yellow-700">
-                    <p className="text-xs text-yellow-700 dark:text-yellow-400 font-medium">⏳ Open Slips</p>
+                    <p className="text-xs text-yellow-700 dark:text-yellow-400 font-medium">⏳ Pending Step 2 Vehicles</p>
                     <p className="text-2xl font-black text-yellow-600 dark:text-yellow-400">{summary.open}</p>
                 </div>
             </div>
@@ -110,15 +124,15 @@ const WeighmentRegister = () => {
                         type="date" name="endDate" value={filters.endDate}
                         onChange={handleFilterChange} className="form-input text-sm" placeholder="To Date"
                     />
-                    <select name="slipType" value={filters.slipType} onChange={handleFilterChange} className="form-select text-sm">
+                    <select name="slipType" value={filters.slipType} onChange={handleFilterChange} className="form-select text-sm font-semibold">
                         <option value="">All Types</option>
                         <option value="Inward">Inward</option>
                         <option value="Outward">Outward</option>
                     </select>
-                    <select name="slipStatus" value={filters.slipStatus} onChange={handleFilterChange} className="form-select text-sm">
+                    <select name="slipStatus" value={filters.slipStatus} onChange={handleFilterChange} className="form-select text-sm font-semibold">
                         <option value="">All Status</option>
-                        <option value="Open">Open</option>
-                        <option value="Closed">Closed</option>
+                        <option value="Open">Step 1 Open</option>
+                        <option value="Closed">Step 2 Completed</option>
                     </select>
                     <input
                         type="text" name="search" value={filters.search}
@@ -143,18 +157,21 @@ const WeighmentRegister = () => {
                                 <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Gross MT</th>
                                 <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Tare MT</th>
                                 <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-400 bg-green-50 dark:bg-green-900/20">Net MT</th>
+                                <th className="text-right px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Rate / Ton</th>
+                                <th className="text-right px-4 py-3 font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20">Total Amount (₹)</th>
+                                <th className="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Payment Mode</th>
                                 <th className="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Status</th>
                                 <th className="text-center px-4 py-3 font-semibold text-gray-600 dark:text-gray-400">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={11} className="text-center py-12 text-gray-400">
+                                <tr><td colSpan={14} className="text-center py-12 text-gray-400">
                                     <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-                                    Loading...
+                                    Loading slips...
                                 </td></tr>
                             ) : slips.length === 0 ? (
-                                <tr><td colSpan={11} className="text-center py-12 text-gray-400">No slips found for selected filters</td></tr>
+                                <tr><td colSpan={14} className="text-center py-12 text-gray-400">No weighment slips found for selected filters</td></tr>
                             ) : slips.map((slip, i) => (
                                 <tr key={slip._id} className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition ${i % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-800/20'}`}>
                                     <td className="px-4 py-3 font-mono font-bold text-blue-600 dark:text-blue-400">{slip.slipNumber}</td>
@@ -172,39 +189,61 @@ const WeighmentRegister = () => {
                                         {slip.slipTime && <span className="block text-gray-400">{slip.slipTime}</span>}
                                     </td>
                                     <td className="px-4 py-3 font-semibold">{slip.vehicleNumber}</td>
-                                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{slip.partyName || '—'}</td>
-                                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{slip.material?.name || '—'}</td>
-                                    <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{slip.grossWeight?.toFixed(3) || '—'}</td>
-                                    <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{slip.slipStatus === 'Closed' ? slip.tareWeight?.toFixed(3) : '—'}</td>
-                                    <td className="px-4 py-3 text-right font-bold text-green-600 dark:text-green-400 bg-green-50/50 dark:bg-green-900/10">
-                                        {slip.slipStatus === 'Closed' ? slip.netWeight?.toFixed(3) : '—'}
+                                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">{slip.partyName || '—'}</td>
+                                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 font-medium">{slip.material?.name || '—'}</td>
+                                    <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300 font-mono">
+                                        {slip.grossWeight > 0 ? slip.grossWeight.toFixed(3) : <span className="text-gray-400 font-sans text-xs">Step 2</span>}
+                                    </td>
+                                    <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300 font-mono">
+                                        {slip.tareWeight > 0 ? slip.tareWeight.toFixed(3) : <span className="text-gray-400 font-sans text-xs">Step 2</span>}
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-bold text-green-600 dark:text-green-400 bg-green-50/50 dark:bg-green-900/10 font-mono text-base">
+                                        {slip.slipStatus === 'Closed' ? slip.netWeight.toFixed(3) : '—'}
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-mono font-bold text-gray-700 dark:text-gray-300">
+                                        {slip.ratePerTon ? `₹${slip.ratePerTon}` : '—'}
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-mono font-black text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-900/10 text-base">
+                                        {slip.totalAmount ? `₹${slip.totalAmount.toLocaleString('en-IN')}` : '—'}
                                     </td>
                                     <td className="px-4 py-3 text-center">
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                        {slip.paymentType ? (
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                                                slip.paymentType === 'Credit'
+                                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                                    : slip.paymentType === 'UPI'
+                                                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+                                                    : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                                            }`}>
+                                                💳 {slip.paymentType}
+                                            </span>
+                                        ) : '—'}
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                                             slip.slipStatus === 'Open'
-                                                ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400'
-                                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
+                                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                                                : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
                                         }`}>
-                                            {slip.slipStatus === 'Open' ? '⏳ Open' : '✅ Closed'}
+                                            {slip.slipStatus === 'Open' ? '⏳ Step 1 Open' : '✅ Step 2 Complete'}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-center">
-                                        <div className="flex items-center justify-center gap-1">
-                                            {slip.slipStatus === 'Closed' && (
-                                                <a
-                                                    href={`/weighment/print/${slip._id}`}
-                                                    target="_blank"
-                                                    className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                                                >
-                                                    🖨️ Print
-                                                </a>
-                                            )}
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <a
+                                                href={`/weighment/print/${slip._id}`}
+                                                target="_blank"
+                                                className="text-xs px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 transition font-bold"
+                                                title={slip.slipStatus === 'Open' ? 'Print Step 1 Initial Ticket' : 'Print Step 2 Final Ticket'}
+                                            >
+                                                🖨️ {slip.slipStatus === 'Open' ? 'Print Step 1' : 'Print Final'}
+                                            </a>
                                             {slip.slipStatus === 'Open' && (
                                                 <Link
                                                     href="/weighment/close"
-                                                    className="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 rounded hover:bg-yellow-200 transition"
+                                                    className="text-xs px-2 py-1 bg-amber-500 text-white rounded hover:bg-amber-600 transition font-bold"
                                                 >
-                                                    🔒 Close
+                                                    ➡️ Step 2
                                                 </Link>
                                             )}
                                         </div>
@@ -212,19 +251,6 @@ const WeighmentRegister = () => {
                                 </tr>
                             ))}
                         </tbody>
-                        {slips.length > 0 && (
-                            <tfoot className="bg-gray-50 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-600">
-                                <tr>
-                                    <td colSpan={6} className="px-4 py-3 font-bold text-gray-700 dark:text-gray-300">TOTALS ({slips.length} slips)</td>
-                                    <td className="px-4 py-3 text-right font-bold">{slips.reduce((a, s) => a + (s.grossWeight || 0), 0).toFixed(3)}</td>
-                                    <td className="px-4 py-3 text-right font-bold">{slips.filter(s => s.slipStatus === 'Closed').reduce((a, s) => a + (s.tareWeight || 0), 0).toFixed(3)}</td>
-                                    <td className="px-4 py-3 text-right font-black text-green-600 dark:text-green-400 bg-green-50/50 dark:bg-green-900/10">
-                                        {slips.filter(s => s.slipStatus === 'Closed').reduce((a, s) => a + (s.netWeight || 0), 0).toFixed(3)}
-                                    </td>
-                                    <td colSpan={2}></td>
-                                </tr>
-                            </tfoot>
-                        )}
                     </table>
                 </div>
             </div>

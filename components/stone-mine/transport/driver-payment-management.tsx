@@ -25,20 +25,41 @@ const DriverPaymentManagement = () => {
     const [showForm, setShowForm] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const initialForm = {
         date: new Date().toISOString().split('T')[0],
-        tripId: '',
-        vehicleType: '',
         driverName: '',
-        paymentType: 'Weekly Salary',
+        vehicleType: 'Lorry',
+        paymentType: 'Shift Based', // 'Shift Based' | 'Daily Salary' | 'Weekly Salary' | 'Monthly Salary' | 'Bata' | 'Advance'
+        shiftType: 'Day Shift', // 'Day Shift' | 'Night Shift' | 'Day & Night Shift'
+        
+        // Shift calculations
+        dayShiftCount: '1',
+        dayShiftRate: '700',
+        nightShiftCount: '0',
+        nightShiftRate: '800',
+        dayAndNightShiftCount: '0',
+        dayAndNightShiftRate: '1500',
+
+        // Daily calculation
+        daysWorked: '1',
+        dailyRate: '700',
+
+        // Weekly calculation
+        weeksWorked: '1',
+        weeklyRate: '4500',
+
+        // Fixed Monthly / Custom amount
         amount: '',
-        padiKasu: '',
-        advanceAmount: '',
-        tripCount: '1',
+
+        padiKasu: '', // Bata
+        advanceAmount: '0',
         paymentMode: 'Cash',
-        sourceType: 'Sale',
+        sourceType: 'General', // 'General' | 'Sale' | 'Rental'
+        tripId: '',
         rentalId: '',
+        tripCount: '1',
         notes: ''
     };
 
@@ -57,22 +78,19 @@ const DriverPaymentManagement = () => {
 
             if (payRes.data.success) setPayments(payRes.data.data);
 
-            // Collect drivers from Labour Management
             let combinedDrivers: any[] = [];
             if (driverRes.data.success) {
                 const laborDrivers = driverRes.data.data.filter((l: any) =>
                     l.workType?.toLowerCase().includes('driver')
-                ).map((l: any) => ({ name: l.name, type: 'Labour' }));
+                ).map((l: any) => ({ name: l.name, type: 'Labour', id: l._id, wage: l.wage, wageType: l.wageType }));
                 combinedDrivers = [...laborDrivers];
             }
 
-            // Collect drivers from Vehicle Master
             if (vehicleRes.data.success) {
                 const vehicleDrivers = vehicleRes.data.data
                     .filter((v: any) => v.driverName)
                     .map((v: any) => ({ name: v.driverName, type: 'Vehicle', vehicle: v.vehicleNumber || v.registrationNumber }));
 
-                // Add unique names from vehicles
                 vehicleDrivers.forEach((vd: any) => {
                     if (!combinedDrivers.find(d => d.name.toLowerCase() === vd.name.toLowerCase())) {
                         combinedDrivers.push(vd);
@@ -83,14 +101,12 @@ const DriverPaymentManagement = () => {
             setDrivers(combinedDrivers);
         } catch (error) {
             console.error(error);
-            showToast('Error fetching data', 'error');
+            showToast('Error fetching driver payment data', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    // Fetch trips for a given date, filtering out trips that already have a payment.
-    // If editing, the current trip (currentEditTripId) is always shown in the list.
     const fetchTripsForDate = async (date: string, currentEditTripId?: string) => {
         try {
             const [tripsRes, paymentsRes] = await Promise.all([
@@ -100,14 +116,10 @@ const DriverPaymentManagement = () => {
 
             if (tripsRes.data.success) {
                 const allTrips = tripsRes.data.data;
-
-                // Collect all tripIds that already have a payment recorded
                 const paidTripIds: string[] = (paymentsRes.data.success ? paymentsRes.data.data : [])
                     .filter((p: any) => p.tripId)
                     .map((p: any) => p.tripId.toString());
 
-                // Filter: exclude already-paid trips, but always include the currently-being-edited trip
-                // Also only allow 'Own' ownershipType vehicles to be shown
                 const availableTrips = allTrips.filter((t: any) => {
                     if (currentEditTripId && t._id.toString() === currentEditTripId) return true;
                     if (t.vehicleId?.ownershipType !== 'Own') return false;
@@ -143,102 +155,85 @@ const DriverPaymentManagement = () => {
         }
     };
 
+    const fetchDriverAdvance = (driverName: string, date: string) => {
+        if (!driverName) return;
+        api.get(`/labour/advance`).then(res => {
+            if (res.data.success) {
+                const totalAdv = res.data.data
+                    .filter((a: any) => {
+                        const isSameDriver = a.labour?.name?.trim().toLowerCase() === driverName.trim().toLowerCase();
+                        const advDate = new Date(a.date).toISOString().split('T')[0];
+                        return isSameDriver && advDate === date;
+                    })
+                    .reduce((sum: number, a: any) => sum + (a.amount || 0), 0);
+                setFormData(prev => ({ ...prev, advanceAmount: totalAdv.toString() }));
+            }
+        }).catch(err => console.error(err));
+    };
+
     useEffect(() => {
         fetchData();
         fetchTripsForDate(formData.date);
         fetchRentalsForDate(formData.date);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleChange = (e: any) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => {
+            const updated = { ...prev, [name]: value };
 
-        if (name === 'date') {
-            fetchTripsForDate(value, editId || undefined);
-            fetchRentalsForDate(value, editId || undefined);
-            setFormData(prev => ({ ...prev, date: value, tripId: '', rentalId: '', vehicleType: '', driverName: '' }));
-        }
-
-        if (name === 'tripId') {
-            const selectedTrip = tripsByDate.find(t => t._id === value);
-            if (selectedTrip) {
-                const isContract = selectedTrip.vehicleId?.ownershipType === 'Contract';
-                const contractorName = selectedTrip.vehicleId?.contractor?.name;
-                const vNum = selectedTrip.vehicleId?.vehicleNumber || selectedTrip.vehicleId?.registrationNumber || 'No Plate';
-
-                // Calculate how many trips this specific DRIVER did with this specific vehicle on this day
-                const driverTripsCount = tripsByDate.filter(t =>
-                    ((t.vehicleId?.vehicleNumber || t.vehicleId?.registrationNumber || t.vehicleId?._id) === (selectedTrip.vehicleId?.vehicleNumber || selectedTrip.vehicleId?.registrationNumber || selectedTrip.vehicleId?._id)) &&
-                    (t.driverName === selectedTrip.driverName)
-                ).length;
-
-                setFormData(prev => ({
-                    ...prev,
-                    tripId: value,
-                    vehicleType: selectedTrip.vehicleType || 'Lorry',
-                    driverName: isContract && contractorName ? `[VENDOR] ${contractorName}` : selectedTrip.driverName,
-                    tripCount: driverTripsCount.toString(),
-                    notes: `Trip: ${selectedTrip.fromLocation} to ${selectedTrip.toLocation} (${vNum})${contractorName ? ` | Vendor: ${contractorName}` : ''}`
-                }));
-
-                // Fetch advances for this driver (Match by ID or Name)
-                api.get(`/labour/advance`).then(res => {
-                    if (res.data.success) {
-                        const totalAdv = res.data.data
-                            .filter((a: any) => {
-                                const isSameDriver = (selectedTrip.driverId && a.labour?._id === selectedTrip.driverId) ||
-                                                   (a.labour?.name?.trim().toLowerCase() === selectedTrip.driverName?.trim().toLowerCase());
-                                
-                                // Only deduct advances from the same date to match user expectation for today's payment
-                                const advDate = new Date(a.date).toISOString().split('T')[0];
-                                const selDate = formData.date;
-                                return isSameDriver && advDate === selDate;
-                            })
-                            .reduce((sum: number, a: any) => sum + a.amount, 0);
-                        setFormData(prev => ({ ...prev, advanceAmount: totalAdv.toString() }));
-                    }
-                });
+            if (name === 'date') {
+                fetchTripsForDate(value, editId || undefined);
+                fetchRentalsForDate(value, editId || undefined);
+                if (updated.driverName) fetchDriverAdvance(updated.driverName, value);
             }
-        }
 
-        if (name === 'rentalId') {
-            const selectedRental = rentalsByDate.find(r => r._id === value);
-            if (selectedRental) {
-                const vNum = selectedRental.vehicleId?.vehicleNumber || selectedRental.vehicleId?.registrationNumber || 'No Plate';
-                const rType = selectedRental.rentalType || 'Day';
-                
-                setFormData(prev => ({
-                    ...prev,
-                    rentalId: value,
-                    vehicleType: selectedRental.vehicleId?.type || 'Lorry',
-                    driverName: selectedRental.driverName,
-                    tripCount: selectedRental.duration.toString(),
-                    paymentType: 'Per Trip',
-                    notes: `Rental: ${selectedRental.customerName} (${vNum}) | Type: ${rType}`
-                }));
-
-                // If rentalType is 'Trip', set paymentType to 'Per Trip'
-                if (rType === 'Trip') {
-                    setFormData(p => ({ ...p, paymentType: 'Per Trip' }));
+            if (name === 'driverName') {
+                fetchDriverAdvance(value, updated.date);
+                const selectedDriver = drivers.find(d => d.name === value);
+                if (selectedDriver && selectedDriver.wage) {
+                    if (selectedDriver.wageType === 'Monthly') {
+                        updated.paymentType = 'Monthly Salary';
+                        updated.amount = selectedDriver.wage.toString();
+                    } else {
+                        updated.dailyRate = selectedDriver.wage.toString();
+                        updated.dayShiftRate = selectedDriver.wage.toString();
+                    }
                 }
-
-                // Fetch advances
-                api.get(`/labour/advance`).then(res => {
-                    if (res.data.success) {
-                        const totalAdv = res.data.data
-                            .filter((a: any) => {
-                                const isSameDriver = (a.labour?.name?.trim().toLowerCase() === selectedRental.driverName?.trim().toLowerCase());
-                                const advDate = new Date(a.date).toISOString().split('T')[0];
-                                return isSameDriver && advDate === formData.date;
-                            })
-                            .reduce((sum: number, a: any) => sum + a.amount, 0);
-                        setFormData(prev => ({ ...prev, advanceAmount: totalAdv.toString() }));
-                    }
-                });
             }
-        }
+
+            return updated;
+        });
     };
+
+    // Calculate gross salary before bata & advance
+    const calculateGrossSalary = (form: typeof initialForm) => {
+        if (form.paymentType === 'Shift Based') {
+            if (form.shiftType === 'Day Shift') {
+                return Number(form.dayShiftCount || 0) * Number(form.dayShiftRate || 0);
+            } else if (form.shiftType === 'Night Shift') {
+                return Number(form.nightShiftCount || 0) * Number(form.nightShiftRate || 0);
+            } else if (form.shiftType === 'Day & Night Shift') {
+                const combined = Number(form.dayAndNightShiftCount || 0) * Number(form.dayAndNightShiftRate || 0);
+                if (combined > 0) return combined;
+                return (Number(form.dayShiftCount || 0) * Number(form.dayShiftRate || 0)) +
+                       (Number(form.nightShiftCount || 0) * Number(form.nightShiftRate || 0));
+            }
+            return (Number(form.dayShiftCount || 0) * Number(form.dayShiftRate || 0)) +
+                   (Number(form.nightShiftCount || 0) * Number(form.nightShiftRate || 0)) +
+                   (Number(form.dayAndNightShiftCount || 0) * Number(form.dayAndNightShiftRate || 0));
+        } else if (form.paymentType === 'Daily Salary') {
+            return Number(form.daysWorked || 0) * Number(form.dailyRate || 0);
+        } else if (form.paymentType === 'Weekly Salary') {
+            return Number(form.weeksWorked || 0) * Number(form.weeklyRate || 0);
+        }
+        return Number(form.amount || 0);
+    };
+
+    const grossSalary = calculateGrossSalary(formData);
+    const padiKasuNum = Number(formData.padiKasu || 0);
+    const advanceNum = Number(formData.advanceAmount || 0);
+    const netPayable = (grossSalary + padiKasuNum) - advanceNum;
 
     const resetForm = () => {
         setFormData(initialForm);
@@ -254,11 +249,11 @@ const DriverPaymentManagement = () => {
         if (!deleteId) return;
         try {
             await api.delete(`/driver-payments/${deleteId}`);
-            showToast('Payment record deleted', 'success');
+            showToast('Driver payment record deleted', 'success');
             fetchData();
         } catch (error) {
             console.error(error);
-            showToast('Error deleting record', 'error');
+            showToast('Error deleting driver payment record', 'error');
         } finally {
             setDeleteId(null);
         }
@@ -267,9 +262,20 @@ const DriverPaymentManagement = () => {
     const handleSubmit = async (e: any) => {
         e.preventDefault();
         try {
+            const computedAmount = calculateGrossSalary(formData);
             const payload: any = {
                 ...formData,
-                amount: Number(formData.amount),
+                amount: computedAmount,
+                dayShiftCount: Number(formData.dayShiftCount || 0),
+                dayShiftRate: Number(formData.dayShiftRate || 0),
+                nightShiftCount: Number(formData.nightShiftCount || 0),
+                nightShiftRate: Number(formData.nightShiftRate || 0),
+                dayAndNightShiftCount: Number(formData.dayAndNightShiftCount || 0),
+                dayAndNightShiftRate: Number(formData.dayAndNightShiftRate || 0),
+                daysWorked: Number(formData.daysWorked || 0),
+                dailyRate: Number(formData.dailyRate || 0),
+                weeksWorked: Number(formData.weeksWorked || 0),
+                weeklyRate: Number(formData.weeklyRate || 0),
                 padiKasu: Number(formData.padiKasu || 0),
                 advanceAmount: Number(formData.advanceAmount || 0),
                 tripCount: Number(formData.tripCount || 1),
@@ -277,12 +283,13 @@ const DriverPaymentManagement = () => {
 
             if (!payload.tripId || payload.tripId === '') delete payload.tripId;
             if (!payload.rentalId || payload.rentalId === '') delete payload.rentalId;
+
             if (editId) {
                 await api.put(`/driver-payments/${editId}`, payload);
-                showToast('Payment updated successfully!', 'success');
+                showToast('Driver payment record updated!', 'success');
             } else {
                 await api.post('/driver-payments', payload);
-                showToast('Payment recorded successfully!', 'success');
+                showToast('Driver payment recorded successfully!', 'success');
             }
             resetForm();
             fetchData();
@@ -294,188 +301,327 @@ const DriverPaymentManagement = () => {
 
     const handleEdit = (payment: any) => {
         setFormData({
-            date: payment.date.split('T')[0],
-            tripId: payment.tripId || '',
-            vehicleType: payment.vehicleType || '',
-            driverName: payment.driverName,
-            paymentType: payment.paymentType,
-            amount: payment.amount.toString(),
-            padiKasu: payment.padiKasu.toString(),
+            date: payment.date ? payment.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            driverName: payment.driverName || '',
+            vehicleType: payment.vehicleType || 'Lorry',
+            paymentType: payment.paymentType || 'Shift Based',
+            shiftType: payment.shiftType || 'Day Shift',
+            dayShiftCount: (payment.dayShiftCount || 0).toString(),
+            dayShiftRate: (payment.dayShiftRate || 0).toString(),
+            nightShiftCount: (payment.nightShiftCount || 0).toString(),
+            nightShiftRate: (payment.nightShiftRate || 0).toString(),
+            dayAndNightShiftCount: (payment.dayAndNightShiftCount || 0).toString(),
+            dayAndNightShiftRate: (payment.dayAndNightShiftRate || 0).toString(),
+            daysWorked: (payment.daysWorked || 0).toString(),
+            dailyRate: (payment.dailyRate || 0).toString(),
+            weeksWorked: (payment.weeksWorked || 0).toString(),
+            weeklyRate: (payment.weeklyRate || 0).toString(),
+            amount: (payment.amount || 0).toString(),
+            padiKasu: (payment.padiKasu || 0).toString(),
             advanceAmount: (payment.advanceAmount || 0).toString(),
-            tripCount: (payment.tripCount || 1).toString(),
-            paymentMode: payment.paymentMode,
-            sourceType: payment.sourceType || 'Sale',
+            paymentMode: payment.paymentMode || 'Cash',
+            sourceType: payment.sourceType || 'General',
+            tripId: payment.tripId || '',
             rentalId: payment.rentalId || '',
+            tripCount: (payment.tripCount || 1).toString(),
             notes: payment.notes || ''
         });
         setEditId(payment._id);
         setShowForm(true);
-        if (payment.date) {
-            fetchTripsForDate(payment.date.split('T')[0], payment.tripId || undefined);
-            fetchRentalsForDate(payment.date.split('T')[0], payment.rentalId || undefined);
-        }
     };
+
+    const filteredPayments = payments.filter(p => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+            p.driverName?.toLowerCase().includes(q) ||
+            p.paymentType?.toLowerCase().includes(q) ||
+            p.shiftType?.toLowerCase().includes(q) ||
+            p.vehicleType?.toLowerCase().includes(q)
+        );
+    });
 
     return (
         <div className="space-y-6">
+            {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold dark:text-white-light">ஓட்டுநர் சம்பளம் (Driver Payment)</h2>
-                    <p className="text-white-dark text-sm mt-1">Manage trip payments, monthly salary and allowances</p>
+                    <h2 className="text-2xl font-bold dark:text-white-light">ஓட்டுநர் சம்பளம் (Driver Shift & Fixed Salary)</h2>
+                    <p className="text-white-dark text-sm mt-1">Manage shift-based (Day/Night/Day&Night), daily, weekly, and monthly driver payments</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-                    <IconPlus className="w-5 h-5 ltr:mr-2 rtl:ml-2" /> Record New Payment
+                <button className="btn btn-primary shadow-lg" onClick={() => setShowForm(true)}>
+                    <IconPlus className="w-5 h-5 ltr:mr-2 rtl:ml-2" /> Record Driver Payment
                 </button>
             </div>
 
+            {/* Entry Form */}
             {showForm && (
-                <div className="panel animate__animated animate__fadeIn max-w-2xl mx-auto">
+                <div className="panel animate__animated animate__fadeIn max-w-3xl mx-auto shadow-xl rounded-2xl border border-primary/10">
                     <div className="flex items-center justify-between mb-5 border-b pb-3 border-[#ebedf2] dark:border-[#1b2e4b]">
-                        <h5 className="font-bold text-lg">Record Payment</h5>
+                        <h5 className="font-bold text-lg text-primary flex items-center gap-2">
+                            <IconCashBanknotes className="w-6 h-6 text-primary" />
+                            {editId ? 'Edit Driver Salary Record' : 'Record New Driver Salary'}
+                        </h5>
                         <button onClick={resetForm} className="text-white-dark hover:text-danger">
                             <IconX />
                         </button>
                     </div>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Date & Driver Selection */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Payment Date</label>
+                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Payment Date <span className="text-danger">*</span></label>
                                 <input type="date" name="date" className="form-input font-bold" value={formData.date} onChange={handleChange} required />
                             </div>
                             <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Source Category</label>
-                                <div className="flex bg-primary/5 p-1 rounded-xl w-full gap-1 border border-primary/10">
-                                    {['Sale', 'Rental'].map(source => (
-                                        <button
-                                            key={source}
-                                            type="button"
-                                            onClick={() => setFormData(p => ({ ...p, sourceType: source, tripId: '', rentalId: '', vehicleType: '', driverName: '' }))}
-                                            className={`flex-1 py-1.5 rounded-lg text-xs font-black uppercase transition-all ${formData.sourceType === source ? 'bg-primary text-white shadow-md' : 'text-primary hover:bg-primary/10'}`}
-                                        >
-                                            {source === 'Sale' ? '📦 Sale Trips' : '🏗️ Rentals'}
-                                        </button>
+                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Driver Name <span className="text-danger">*</span></label>
+                                <select
+                                    name="driverName"
+                                    className="form-select font-bold border-primary text-primary"
+                                    value={formData.driverName}
+                                    onChange={handleChange}
+                                    required
+                                >
+                                    <option value="">-- Select Driver --</option>
+                                    {drivers.map((d, index) => (
+                                        <option key={index} value={d.name}>
+                                            {d.name} {d.type === 'Vehicle' ? `(Vehicle: ${d.vehicle})` : '(Staff Driver)'}
+                                        </option>
                                     ))}
-                                </div>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Vehicle Type</label>
+                                <select name="vehicleType" className="form-select font-bold" value={formData.vehicleType} onChange={handleChange}>
+                                    <option value="Lorry">Lorry</option>
+                                    <option value="Tipper">Tipper</option>
+                                    <option value="Tractor">Tractor</option>
+                                    <option value="JCB">JCB</option>
+                                    <option value="Poclain">Poclain</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
                         </div>
 
-                        {formData.sourceType === 'Sale' ? (
-                            <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-primary font-black">
-                                    Select Trip Record {formData.paymentType === 'Per Trip' && <span className="text-danger">*</span>}
-                                </label>
-                                <select name="tripId" className="form-select border-primary font-bold bg-primary/5" value={formData.tripId} onChange={handleChange} required={formData.paymentType === 'Per Trip'}>
-                                    <option value="">Choose Trip ID (Optional for Weekly/Monthly Salary)</option>
-                                    {tripsByDate.map((t) => (
-                                        <option key={t._id} value={t._id}>
-                                            {t.vehicleId?.vehicleNumber || t.vehicleId?.registrationNumber || 'No Plate'} - {t.driverName} | {t.fromLocation} → {t.toLocation} | {t.vehicleId?.ownershipType === 'Contract' ? `(CONTRACT - ${t.vehicleId?.contractor?.name || 'Vendor'})` : '(OWN)'}
-                                        </option>
-                                    ))}
-                                    {tripsByDate.length === 0 && <option disabled>No unpaid trips found on this date</option>}
-                                </select>
+                        {/* Salary Mode Selector */}
+                        <div>
+                            <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Salary Mode (சம்பளம் வகை) <span className="text-danger">*</span></label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                {[
+                                    { id: 'Shift Based', label: '🌅 Shift Based', sub: 'Day / Night / Both' },
+                                    { id: 'Daily Salary', label: '📅 Daily Salary', sub: 'Per Day Wage' },
+                                    { id: 'Weekly Salary', label: '📆 Weekly Salary', sub: 'Per Week Wage' },
+                                    { id: 'Monthly Salary', label: '🗓️ Monthly Salary', sub: 'Fixed Monthly' },
+                                ].map(mode => (
+                                    <button
+                                        key={mode.id}
+                                        type="button"
+                                        onClick={() => setFormData(p => ({ ...p, paymentType: mode.id }))}
+                                        className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${
+                                            formData.paymentType === mode.id
+                                                ? 'bg-primary text-white border-primary shadow-md scale-105'
+                                                : 'bg-white dark:bg-black/20 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-primary'
+                                        }`}
+                                    >
+                                        <span className="font-bold text-sm">{mode.label}</span>
+                                        <span className="text-[10px] opacity-80">{mode.sub}</span>
+                                    </button>
+                                ))}
                             </div>
-                        ) : (
-                            <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-info font-black">
-                                    Select Rental Record {formData.paymentType === 'Per Trip' && <span className="text-danger">*</span>}
-                                </label>
-                                <select name="rentalId" className="form-select border-info font-bold bg-info/5" value={formData.rentalId} onChange={handleChange} required={formData.paymentType === 'Per Trip'}>
-                                    <option value="">Choose Rental ID (Optional for Weekly/Monthly Salary)</option>
-                                    {rentalsByDate.map((r) => (
-                                        <option key={r._id} value={r._id}>
-                                            {r.vehicleId?.name} ({r.vehicleId?.vehicleNumber || r.vehicleId?.registrationNumber}) - {r.driverName} | {r.customerName} ({r.rentalType})
-                                        </option>
-                                    ))}
-                                    {rentalsByDate.length === 0 && <option disabled>No unpaid rentals found on this date</option>}
-                                </select>
-                            </div>
-                        )}
+                        </div>
 
-                        {/* Selection Summary */}
-                        {(formData.tripId || formData.rentalId) && (
-                            <div className={`p-3 rounded-lg border -mt-2 ${formData.sourceType === 'Sale' ? 'bg-primary/5 border-primary/20' : 'bg-info/5 border-info/20'}`}>
-                                <p className={`text-[11px] font-bold flex items-center gap-1 mb-2 ${formData.sourceType === 'Sale' ? 'text-primary' : 'text-info'}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${formData.sourceType === 'Sale' ? 'bg-primary' : 'bg-info'}`} />
-                                    Linked {formData.sourceType}: {formData.sourceType === 'Sale' ? 
-                                        tripsByDate.find(t => t._id === formData.tripId)?.vehicleId?.vehicleNumber : 
-                                        rentalsByDate.find(r => r._id === formData.rentalId)?.vehicleId?.vehicleNumber || rentalsByDate.find(r => r._id === formData.rentalId)?.vehicleId?.registrationNumber}
-                                </p>
-                                <div className="flex items-center justify-between bg-white dark:bg-black/20 p-2 rounded border border-white-dark/10">
-                                    <span className="text-[10px] font-bold text-white-dark uppercase">Details:</span>
-                                    <div className="flex flex-col items-end">
-                                        <span className={`badge text-[10px] py-0 ${formData.sourceType === 'Sale' ? 'badge-outline-primary' : 'badge-outline-info'}`}>
-                                            {formData.sourceType === 'Sale' ? 'SALE TRIP' : 'RENTAL SERVICE'}
-                                        </span>
-                                        <span className="text-[11px] font-black uppercase mt-0.5">
-                                            {formData.sourceType === 'Sale' ? 
-                                                (tripsByDate.find(t => t._id === formData.tripId)?.fromLocation + ' -> ' + tripsByDate.find(t => t._id === formData.tripId)?.toLocation) : 
-                                                (rentalsByDate.find(r => r._id === formData.rentalId)?.customerName + ' [' + rentalsByDate.find(r => r._id === formData.rentalId)?.rentalType + ']')}
-                                        </span>
+                        {/* Mode Specific Inputs */}
+                        {/* 1. Shift Based Options */}
+                        {formData.paymentType === 'Shift Based' && (
+                            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-4">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                    <label className="text-sm font-black text-primary uppercase">Shift Type (ஷிப்ட் தேர்வு):</label>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {[
+                                            { id: 'Day Shift', label: '☀️ Day Shift (பகல்)' },
+                                            { id: 'Night Shift', label: '🌙 Night Shift (இரவு)' },
+                                            { id: 'Day & Night Shift', label: '🔄 Day & Night (இரண்டும்)' },
+                                        ].map(shift => (
+                                            <button
+                                                key={shift.id}
+                                                type="button"
+                                                onClick={() => setFormData(p => ({ ...p, shiftType: shift.id }))}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                    formData.shiftType === shift.id
+                                                        ? 'bg-primary text-white shadow-sm'
+                                                        : 'bg-white dark:bg-black/30 text-gray-600 dark:text-gray-300 hover:bg-primary/10'
+                                                }`}
+                                            >
+                                                {shift.label}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {(formData.shiftType === 'Day Shift' || formData.shiftType === 'Day & Night Shift') && (
+                                        <div className="p-3 bg-white dark:bg-black/30 rounded-lg border border-amber-500/20">
+                                            <label className="text-xs font-bold text-amber-600 block mb-1">☀️ Day Shift Details</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <span className="text-[11px] font-bold text-white-dark block">No. of Shifts</span>
+                                                    <input
+                                                        type="number"
+                                                        name="dayShiftCount"
+                                                        className="form-input font-bold text-amber-700"
+                                                        value={formData.dayShiftCount}
+                                                        onChange={handleChange}
+                                                        min="0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <span className="text-[11px] font-bold text-white-dark block">Day Rate (₹/shift)</span>
+                                                    <input
+                                                        type="number"
+                                                        name="dayShiftRate"
+                                                        className="form-input font-bold text-amber-700"
+                                                        value={formData.dayShiftRate}
+                                                        onChange={handleChange}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {(formData.shiftType === 'Night Shift' || formData.shiftType === 'Day & Night Shift') && (
+                                        <div className="p-3 bg-white dark:bg-black/30 rounded-lg border border-indigo-500/20">
+                                            <label className="text-xs font-bold text-indigo-600 block mb-1">🌙 Night Shift Details</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <span className="text-[11px] font-bold text-white-dark block">No. of Shifts</span>
+                                                    <input
+                                                        type="number"
+                                                        name="nightShiftCount"
+                                                        className="form-input font-bold text-indigo-700"
+                                                        value={formData.nightShiftCount}
+                                                        onChange={handleChange}
+                                                        min="0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <span className="text-[11px] font-bold text-white-dark block">Night Rate (₹/shift)</span>
+                                                    <input
+                                                        type="number"
+                                                        name="nightShiftRate"
+                                                        className="form-input font-bold text-indigo-700"
+                                                        value={formData.nightShiftRate}
+                                                        onChange={handleChange}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         )}
 
-                        {formData.sourceType !== 'Rental' && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* 2. Daily Salary */}
+                        {formData.paymentType === 'Daily Salary' && (
+                            <div className="p-4 rounded-xl bg-info/5 border border-info/20 grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Vehicle Type</label>
-                                    <select
-                                        name="vehicleType"
-                                        className={`form-select font-bold ${formData.tripId ? 'bg-[#eee] cursor-not-allowed text-black' : ''}`}
-                                        value={formData.vehicleType}
+                                    <label className="text-xs font-bold text-info uppercase block mb-1">Days Worked (நாட்கள்)</label>
+                                    <input
+                                        type="number"
+                                        name="daysWorked"
+                                        className="form-input font-bold text-info text-lg"
+                                        value={formData.daysWorked}
                                         onChange={handleChange}
-                                        required
-                                        disabled={!!formData.tripId}
-                                    >
-                                        <option value="">{formData.tripId ? formData.vehicleType : 'Select Type'}</option>
-                                        {!formData.tripId && (
-                                            <>
-                                                <option value="Lorry">Lorry</option>
-                                                <option value="Tipper">Tipper</option>
-                                                <option value="Tractor">Tractor</option>
-                                                <option value="JCB">JCB</option>
-                                                <option value="Poclain">Poclain</option>
-                                                <option value="Other">Other</option>
-                                            </>
-                                        )}
-                                    </select>
+                                        min="1"
+                                    />
                                 </div>
                                 <div>
-                                    <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Driver Name <span className="text-danger">*</span></label>
-                                    <select
-                                        name="driverName"
-                                        className={`form-select font-bold ${formData.tripId ? 'bg-[#eee] cursor-not-allowed text-black' : ''}`}
-                                        value={formData.driverName}
+                                    <label className="text-xs font-bold text-info uppercase block mb-1">Daily Wage Rate (₹/நாள்)</label>
+                                    <input
+                                        type="number"
+                                        name="dailyRate"
+                                        className="form-input font-bold text-info text-lg"
+                                        value={formData.dailyRate}
                                         onChange={handleChange}
-                                        required
-                                        disabled={!!formData.tripId}
-                                    >
-                                        <option value="">{formData.tripId ? formData.driverName : 'Select Driver'}</option>
-                                        {!formData.tripId && drivers.map((d, index) => (
-                                            <option key={index} value={d.name}>
-                                                {d.name} {d.type === 'Vehicle' ? `(From: ${d.vehicle})` : '(Employee)'}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        placeholder="0"
+                                    />
                                 </div>
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* 3. Weekly Salary */}
+                        {formData.paymentType === 'Weekly Salary' && (
+                            <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/20 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-bold text-purple-600 uppercase block mb-1">Weeks Count (வாரங்கள்)</label>
+                                    <input
+                                        type="number"
+                                        name="weeksWorked"
+                                        className="form-input font-bold text-purple-600 text-lg"
+                                        value={formData.weeksWorked}
+                                        onChange={handleChange}
+                                        min="1"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-purple-600 uppercase block mb-1">Weekly Wage Rate (₹/வாரம்)</label>
+                                    <input
+                                        type="number"
+                                        name="weeklyRate"
+                                        className="form-input font-bold text-purple-600 text-lg"
+                                        value={formData.weeklyRate}
+                                        onChange={handleChange}
+                                        placeholder="0"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 4. Monthly Salary / Custom Amount */}
+                        {formData.paymentType === 'Monthly Salary' && (
+                            <div className="p-4 rounded-xl bg-success/5 border border-success/20">
+                                <label className="text-xs font-bold text-success uppercase block mb-1">Fixed Monthly Salary Amount (₹)</label>
+                                <input
+                                    type="number"
+                                    name="amount"
+                                    className="form-input font-bold text-success text-xl"
+                                    value={formData.amount}
+                                    onChange={handleChange}
+                                    placeholder="Enter Monthly Amount"
+                                    required
+                                />
+                            </div>
+                        )}
+
+                        {/* Allowances & Deductions */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4 border-gray-200 dark:border-gray-700">
                             <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Payment Type</label>
-                                <select name="paymentType" className="form-select font-bold text-primary" value={formData.paymentType} onChange={handleChange} required>
-                                    <option value="Weekly Salary">📅 Weekly Salary (வார சம்பளம்)</option>
-                                    <option value="Monthly Salary">📆 Monthly Salary (மாத சம்பளம்)</option>
-                                    <option value="Per Trip">🚚 Per Trip Payment (ஒரு Trip-க்கு)</option>
-                                    <option value="Bata">🍱 Bata / Allowance (படா)</option>
-                                    <option value="Advance">💸 Advance Payment (அட்வான்ஸ்)</option>
-                                </select>
+                                <label className="text-xs font-bold text-warning uppercase block mb-1">Padi Kasu / Bata (₹)</label>
+                                <input
+                                    type="number"
+                                    name="padiKasu"
+                                    className="form-input border-warning text-warning font-bold text-lg"
+                                    value={formData.padiKasu}
+                                    onChange={handleChange}
+                                    placeholder="0"
+                                />
                             </div>
                             <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block font-black">Payment Mode</label>
-                                <select name="paymentMode" className="form-select font-bold text-info" value={formData.paymentMode} onChange={handleChange} required>
+                                <label className="text-xs font-bold text-danger uppercase block mb-1">Advance Deduction (₹)</label>
+                                <input
+                                    type="number"
+                                    name="advanceAmount"
+                                    className="form-input border-danger text-danger font-bold text-lg"
+                                    value={formData.advanceAmount}
+                                    onChange={handleChange}
+                                    placeholder="0"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase block mb-1">Payment Mode</label>
+                                <select name="paymentMode" className="form-select font-bold" value={formData.paymentMode} onChange={handleChange}>
                                     <option value="Cash">Cash (ரொக்கம்)</option>
                                     <option value="Bank Transfer">Bank Transfer</option>
                                     <option value="UPI/G-Pay">UPI / G-Pay</option>
@@ -483,67 +629,51 @@ const DriverPaymentManagement = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Net Breakdown Calculation */}
+                        <div className="bg-dark/5 dark:bg-black/40 p-4 rounded-xl border border-dashed border-dark/20 flex flex-col md:flex-row items-center justify-between gap-4">
                             <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-primary font-black underline decoration-primary/20">
-                                    {formData.paymentType === 'Weekly Salary' ? 'Weekly Salary Amount (₹)' : formData.paymentType === 'Monthly Salary' ? 'Monthly Salary Amount (₹)' : 'Basic Amount (₹)'}
-                                </label>
-                                <input type="number" name="amount" className="form-input border-primary text-primary font-bold text-lg" value={formData.amount} onChange={handleChange} required placeholder="0" />
-                            </div>
-                            <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-warning font-black underline decoration-warning/20">Padi Kasu / Bata (₹)</label>
-                                <input type="number" name="padiKasu" className="form-input border-warning text-warning font-bold text-lg" value={formData.padiKasu} onChange={handleChange} placeholder="0" />
-                            </div>
-                            <div>
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-danger font-black underline decoration-danger/20">Advance (₹)</label>
-                                <input type="number" name="advanceAmount" className="form-input border-danger text-danger font-bold text-lg bg-[#eee] cursor-not-allowed" value={formData.advanceAmount} onChange={handleChange} placeholder="0" readOnly />
-                            </div>
-                            <div className="md:col-span-1">
-                                <label className="text-sm font-bold text-white-dark uppercase mb-2 block text-info font-black">
-                                    {formData.paymentType.includes('Salary') ? 'Weeks / Period' : (formData.sourceType === 'Sale' ? 'No. of Trips' : 'Count')}
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <input type="number" name="tripCount" className="form-input border-info text-info font-black text-lg text-center" value={formData.tripCount} onChange={handleChange} required min="1" readOnly={!!formData.tripId} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-dark/5 p-3 rounded-xl border border-dashed border-dark/20 flex items-center justify-between">
-                            <div className="flex flex-col">
-                                <span className="text-white-dark font-bold uppercase text-xs tracking-wider">Total Payable Amount:</span>
-                                <span className="text-[10px] text-white-dark italic">
-                                    {formData.paymentType.includes('Salary') ? 
-                                        `(₹${Number(formData.amount || 0).toLocaleString()} Salary + ₹${Number(formData.padiKasu || 0).toLocaleString()} Bata) - ₹${Number(formData.advanceAmount || 0).toLocaleString()} Advance` : 
-                                        `((₹${Number(formData.amount || 0).toLocaleString()} + ₹${Number(formData.padiKasu || 0).toLocaleString()}) × ${formData.tripCount}) - ₹${Number(formData.advanceAmount || 0).toLocaleString()} Adv`}
+                                <span className="text-xs font-bold uppercase text-white-dark block">Gross Salary: ₹{grossSalary.toLocaleString()}</span>
+                                <span className="text-xs text-white-dark block">
+                                    + Bata ₹{padiKasuNum.toLocaleString()} - Advance ₹{advanceNum.toLocaleString()}
                                 </span>
                             </div>
-                            <span className="text-3xl font-black text-black dark:text-white-light font-mono shadow-sm text-success">
-                                ₹{(((Number(formData.amount || 0) + Number(formData.padiKasu || 0)) * (formData.paymentType.includes('Salary') ? 1 : Number(formData.tripCount || 1))) - Number(formData.advanceAmount || 0)).toLocaleString()}
-                            </span>
+                            <div className="text-right">
+                                <span className="text-xs font-black uppercase text-success block">Net Payable Amount</span>
+                                <span className="text-3xl font-black font-mono text-success">
+                                    ₹{netPayable.toLocaleString()}
+                                </span>
+                            </div>
                         </div>
 
                         <div>
-                            <label className="text-sm font-bold text-white-dark uppercase mb-2 block">Remarks / Notes</label>
-                            <textarea name="notes" className="form-textarea" rows={2} value={formData.notes} onChange={handleChange} placeholder="Optional details..."></textarea>
+                            <label className="text-xs font-bold text-white-dark uppercase block mb-1">Remarks / Notes</label>
+                            <textarea name="notes" className="form-textarea" rows={2} value={formData.notes} onChange={handleChange} placeholder="Shift or payment notes..."></textarea>
                         </div>
 
                         <div className="flex items-center justify-end gap-3 pt-2">
-                            <button type="button" className="btn btn-outline-danger" onClick={resetForm}>Cancel</button>
-                            <button type="submit" className="btn btn-primary px-10">
+                            <button type="button" className="btn btn-outline-danger px-6" onClick={resetForm}>Cancel</button>
+                            <button type="submit" className="btn btn-primary px-8 shadow-md">
                                 <IconSave className="w-5 h-5 ltr:mr-2 rtl:ml-2" />
-                                {editId ? 'Update Record' : 'Save Payment Record'}
+                                {editId ? 'Update Payment' : 'Save Driver Payment'}
                             </button>
                         </div>
                     </form>
                 </div>
             )}
 
+            {/* List Table */}
             {!showForm && (
                 <div className="panel">
-                    <div className="flex items-center justify-between mb-5">
-                        <h5 className="font-bold text-lg dark:text-white-light">Payment Records</h5>
+                    <div className="flex items-center justify-between mb-5 flex-wrap gap-4">
+                        <h5 className="font-bold text-lg dark:text-white-light">Driver Payment Records</h5>
                         <div className="relative w-full max-w-xs">
-                            <input type="text" placeholder="Search payments..." className="form-input ltr:pr-11 rtl:pl-11" />
+                            <input
+                                type="text"
+                                placeholder="Search driver or payment..."
+                                className="form-input ltr:pr-11 rtl:pl-11"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
                             <IconSearch className="w-5 h-5 absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 text-white-dark" />
                         </div>
                     </div>
@@ -553,74 +683,91 @@ const DriverPaymentManagement = () => {
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Target / Driver</th>
-                                    <th>Payment Type</th>
-                                    <th className="!text-center">Mode</th>
-                                    <th className="!text-right">Salary (₹)</th>
+                                    <th>Driver / Vehicle</th>
+                                    <th>Salary Mode</th>
+                                    <th>Shift / Details</th>
+                                    <th className="!text-right">Gross (₹)</th>
                                     <th className="!text-right text-warning">Padi (₹)</th>
                                     <th className="!text-right text-danger">Adv (₹)</th>
-                                    <th className="!text-right text-success bg-success/5 font-black">Total (₹)</th>
-                                    <th>Source</th>
-                                    <th>Count</th>
+                                    <th className="!text-right text-success bg-success/5 font-black">Net Total (₹)</th>
+                                    <th className="!text-center">Mode</th>
                                     <th className="!text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan={9} className="text-center py-8">Loading...</td></tr>
-                                ) : payments.length === 0 ? (
-                                    <tr><td colSpan={9} className="text-center py-8">No payments recorded.</td></tr>
+                                    <tr><td colSpan={10} className="text-center py-8">Loading driver payments...</td></tr>
+                                ) : filteredPayments.length === 0 ? (
+                                    <tr><td colSpan={10} className="text-center py-8 text-white-dark">No driver payment records found.</td></tr>
                                 ) : (
-                                    payments.map((pay) => (
-                                        <tr key={pay._id}>
-                                            <td className="whitespace-nowrap">{new Date(pay.date).toLocaleDateString('en-GB')}</td>
-                                            <td>
-                                                <div className={`font-bold ${pay.driverName.startsWith('[VENDOR]') ? 'text-warning' : 'text-primary'}`}>
-                                                    {pay.driverName}
-                                                </div>
-                                                {pay.notes && <div className="text-[10px] text-white-dark truncate max-w-[150px]">{pay.notes}</div>}
-                                            </td>
-                                            <td>
-                                                <span className={`badge ${
-                                                    pay.paymentType === 'Weekly Salary' ? 'badge-outline-info font-bold' :
-                                                    pay.paymentType === 'Monthly Salary' ? 'badge-outline-primary font-bold' :
-                                                    pay.paymentType === 'Per Trip' ? 'badge-outline-success' :
-                                                    pay.paymentType === 'Advance' ? 'badge-outline-danger' : 'badge-outline-dark'
-                                                }`}>
-                                                    {pay.paymentType}
-                                                </span>
-                                            </td>
-                                            <td className="text-center text-xs">
-                                                {pay.paymentMode}
-                                            </td>
-                                            <td className="!text-right font-bold text-lg font-mono">₹{pay.amount?.toLocaleString()}</td>
-                                            <td className="!text-right font-bold text-lg font-mono text-warning">₹{pay.padiKasu?.toLocaleString() || '0'}</td>
-                                            <td className="!text-right font-bold text-lg font-mono text-danger">₹{pay.advanceAmount?.toLocaleString() || '0'}</td>
-                                            <td className="!text-right font-black text-lg font-mono text-success bg-success/5">₹{((Number(pay.amount || 0) + Number(pay.padiKasu || 0)) * (pay.tripCount || 1) - (pay.advanceAmount || 0)).toLocaleString()}</td>
-                                            <td>
-                                                <span className={`badge ${pay.sourceType === 'Rental' ? 'badge-outline-info' : 'badge-outline-primary'} text-[10px] font-black`}>
-                                                    {pay.sourceType || 'Sale'}
-                                                </span>
-                                            </td>
-                                            <td className="text-center font-bold text-xs">
-                                                {pay.tripCount || 1} {pay.sourceType === 'Rental' ? 'Units' : 'Trips'}
-                                            </td>
-                                            <td className="text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    {canEditRecord(currentUser, pay.createdAt || pay.date) ? (
-                                                        <button onClick={() => handleEdit(pay)} className="btn btn-sm btn-outline-primary p-1">
-                                                            <IconEdit className="w-4 h-4" />
-                                                        </button>
+                                    filteredPayments.map((pay) => {
+                                        const pGross = pay.amount || 0;
+                                        const pPadi = pay.padiKasu || 0;
+                                        const pAdv = pay.advanceAmount || 0;
+                                        const pNet = (pGross + pPadi) - pAdv;
+
+                                        return (
+                                            <tr key={pay._id}>
+                                                <td className="whitespace-nowrap font-bold text-xs">
+                                                    {pay.date ? new Date(pay.date).toLocaleDateString('en-GB') : '-'}
+                                                </td>
+                                                <td>
+                                                    <div className="font-bold text-primary">{pay.driverName}</div>
+                                                    <div className="text-[10px] text-white-dark">{pay.vehicleType || 'Lorry'}</div>
+                                                </td>
+                                                <td>
+                                                    <span className={`badge ${
+                                                        pay.paymentType === 'Shift Based' ? 'badge-outline-primary' :
+                                                        pay.paymentType === 'Daily Salary' ? 'badge-outline-info' :
+                                                        pay.paymentType === 'Weekly Salary' ? 'badge-outline-purple font-bold' :
+                                                        pay.paymentType === 'Monthly Salary' ? 'badge-outline-success font-bold' : 'badge-outline-dark'
+                                                    }`}>
+                                                        {pay.paymentType || 'Shift Based'}
+                                                    </span>
+                                                </td>
+                                                <td className="text-xs">
+                                                    {pay.paymentType === 'Shift Based' ? (
+                                                        <div>
+                                                            <span className="font-bold">{pay.shiftType || 'Day Shift'}</span>
+                                                            <div className="text-[10px] text-white-dark">
+                                                                {pay.dayShiftCount > 0 && `Day: ${pay.dayShiftCount} × ₹${pay.dayShiftRate} `}
+                                                                {pay.nightShiftCount > 0 && `Night: ${pay.nightShiftCount} × ₹${pay.nightShiftRate}`}
+                                                            </div>
+                                                        </div>
+                                                    ) : pay.paymentType === 'Daily Salary' ? (
+                                                        <div>{pay.daysWorked || 1} Days × ₹{pay.dailyRate || 0}</div>
+                                                    ) : pay.paymentType === 'Weekly Salary' ? (
+                                                        <div>{pay.weeksWorked || 1} Weeks × ₹{pay.weeklyRate || 0}</div>
                                                     ) : (
-                                                        <span className="text-[10px] text-white-dark italic">Locked</span>
+                                                        <div>Fixed</div>
                                                     )}
-                                                    {isOwner && (<button onClick={() => setDeleteId(pay._id)} className="btn btn-sm btn-outline-danger p-1">
-                                                        <IconTrashLines className="w-4 h-4" />
-                                                    </button>)}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                </td>
+                                                <td className="!text-right font-bold text-base font-mono">₹{pGross.toLocaleString()}</td>
+                                                <td className="!text-right font-bold text-base font-mono text-warning">₹{pPadi.toLocaleString()}</td>
+                                                <td className="!text-right font-bold text-base font-mono text-danger">₹{pAdv.toLocaleString()}</td>
+                                                <td className="!text-right font-black text-base font-mono text-success bg-success/5">
+                                                    ₹{pNet.toLocaleString()}
+                                                </td>
+                                                <td className="text-center text-xs font-bold">{pay.paymentMode}</td>
+                                                <td className="text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        {canEditRecord(currentUser, pay.createdAt || pay.date) ? (
+                                                            <button onClick={() => handleEdit(pay)} className="btn btn-sm btn-outline-primary p-1">
+                                                                <IconEdit className="w-4 h-4" />
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-[10px] text-white-dark italic">Locked</span>
+                                                        )}
+                                                        {isOwner && (
+                                                            <button onClick={() => setDeleteId(pay._id)} className="btn btn-sm btn-outline-danger p-1">
+                                                                <IconTrashLines className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>
@@ -632,8 +779,8 @@ const DriverPaymentManagement = () => {
                 show={!!deleteId}
                 onCancel={() => setDeleteId(null)}
                 onConfirm={confirmDelete}
-                title="Delete Payment Record"
-                message="Are you sure you want to delete this payment record?"
+                title="Delete Driver Payment Record"
+                message="Are you sure you want to delete this driver payment record?"
             />
         </div>
     );

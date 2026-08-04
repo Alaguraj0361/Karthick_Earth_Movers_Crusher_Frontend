@@ -28,6 +28,9 @@ interface PurchaseOrder {
     _id: string;
     poNumber: string;
     date: string;
+    entryTime?: string;
+    weighmentTime?: string;
+    vehicleNumber?: string;
     supplierId?: Supplier;
     material?: ProductType;
     orderedQty: number;
@@ -48,13 +51,16 @@ const PurchasesPage = () => {
     const [products, setProducts] = useState<ProductType[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [editingPoId, setEditingPoId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
     const [form, setForm] = useState({
         supplierId: '',
         material: '',
         orderedQty: 0,
+        receivedQty: 0,
         ratePerTon: 0,
+        amountPaid: 0,
         notes: '',
     });
 
@@ -80,7 +86,35 @@ const PurchasesPage = () => {
         }
     };
 
-    const handleCreatePO = async (e: React.FormEvent) => {
+    const handleOpenCreateModal = () => {
+        setEditingPoId(null);
+        setForm({
+            supplierId: '',
+            material: '',
+            orderedQty: 0,
+            receivedQty: 0,
+            ratePerTon: 0,
+            amountPaid: 0,
+            notes: '',
+        });
+        setShowModal(true);
+    };
+
+    const handleOpenEditModal = (po: PurchaseOrder) => {
+        setEditingPoId(po._id);
+        setForm({
+            supplierId: po.supplierId?._id || '',
+            material: po.material?._id || '',
+            orderedQty: po.orderedQty || 0,
+            receivedQty: po.receivedQty || 0,
+            ratePerTon: po.ratePerTon || 0,
+            amountPaid: po.amountPaid || 0,
+            notes: po.notes || '',
+        });
+        setShowModal(true);
+    };
+
+    const handleSavePO = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.supplierId) return Swal.fire('Error', 'Please select a supplier', 'error');
         if (!form.material) return Swal.fire('Error', 'Please select material', 'error');
@@ -88,13 +122,17 @@ const PurchasesPage = () => {
 
         setSaving(true);
         try {
-            await api.post('/purchases', form);
-            Swal.fire({ icon: 'success', title: 'Purchase Order Created!', timer: 1500, showConfirmButton: false });
+            if (editingPoId) {
+                await api.put(`/purchases/${editingPoId}`, form);
+                Swal.fire({ icon: 'success', title: 'Purchase Order Updated!', timer: 1500, showConfirmButton: false });
+            } else {
+                await api.post('/purchases', form);
+                Swal.fire({ icon: 'success', title: 'Purchase Order Created!', timer: 1500, showConfirmButton: false });
+            }
             setShowModal(false);
-            setForm({ supplierId: '', material: '', orderedQty: 0, ratePerTon: 0, notes: '' });
             fetchData();
         } catch (err: any) {
-            Swal.fire('Error', err.response?.data?.error || 'Failed to create Purchase Order', 'error');
+            Swal.fire('Error', err.response?.data?.error || 'Failed to save Purchase Order', 'error');
         } finally {
             setSaving(false);
         }
@@ -161,7 +199,7 @@ const PurchasesPage = () => {
                         <p className="text-xs text-gray-500">Buy ROM, Granite Stone &amp; Boulders from suppliers — linked with inward weighments</p>
                     </div>
                 </div>
-                <button onClick={() => setShowModal(true)} className="btn btn-primary text-sm font-bold shadow-md">
+                <button onClick={handleOpenCreateModal} className="btn btn-primary text-sm font-bold shadow-md">
                     + New Purchase Order
                 </button>
             </div>
@@ -210,7 +248,12 @@ const PurchasesPage = () => {
                                             {po.poNumber}
                                         </td>
                                         <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400">
-                                            {new Date(po.date).toLocaleDateString('en-IN')}
+                                            <div>{new Date(po.date).toLocaleDateString('en-IN')}</div>
+                                            {po.entryTime && (
+                                                <span className="inline-block mt-0.5 px-1.5 py-0.2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-bold rounded text-[10px]">
+                                                    ⏱️ {po.entryTime}
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
                                             {po.supplierId?.name || '—'}
@@ -245,6 +288,13 @@ const PurchasesPage = () => {
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={() => handleOpenEditModal(po)}
+                                                    className="px-2.5 py-1 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold rounded hover:bg-blue-100 transition"
+                                                    title="Edit Purchase Order"
+                                                >
+                                                    ✏️ Edit
+                                                </button>
                                                 {po.paymentStatus !== 'Paid' && (
                                                     <button
                                                         onClick={() => handleRecordPayment(po)}
@@ -269,16 +319,18 @@ const PurchasesPage = () => {
                 </div>
             </div>
 
-            {/* Create PO Modal */}
+            {/* Create / Edit PO Modal */}
             {showModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
                     <div className="panel max-w-md w-full my-8 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
                         <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Create Purchase Order</h3>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                {editingPoId ? '✏️ Edit Purchase Order' : 'Create Purchase Order'}
+                            </h3>
                             <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                         </div>
 
-                        <form onSubmit={handleCreatePO} className="space-y-4">
+                        <form onSubmit={handleSavePO} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
                                     Supplier <span className="text-red-500">*</span>
@@ -294,7 +346,7 @@ const PurchasesPage = () => {
                                             ratePerTon: supp?.defaultRatePerTon || f.ratePerTon || 0
                                         }));
                                     }}
-                                    className="form-select"
+                                    className="form-select font-bold"
                                     required
                                 >
                                     <option value="">-- Select Supplier --</option>
@@ -313,7 +365,7 @@ const PurchasesPage = () => {
                                 <select
                                     value={form.material}
                                     onChange={e => setForm(f => ({ ...f, material: e.target.value }))}
-                                    className="form-select"
+                                    className="form-select font-bold"
                                     required
                                 >
                                     <option value="">-- Select Material --</option>
@@ -323,35 +375,36 @@ const PurchasesPage = () => {
                                 </select>
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                    Agreed Rate Per Ton (₹) <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    value={form.ratePerTon || ''}
-                                    onChange={e => setForm(f => ({ ...f, ratePerTon: parseFloat(e.target.value) || 0 }))}
-                                    placeholder="Enter rate per ton"
-                                    className="form-input"
-                                    step="0.01"
-                                    min="0"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                    Ordered Estimated Quantity (MT)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={form.orderedQty || ''}
-                                    onChange={e => setForm(f => ({ ...f, orderedQty: parseFloat(e.target.value) || 0 }))}
-                                    placeholder="Estimated MT (optional)"
-                                    className="form-input"
-                                    step="0.01"
-                                    min="0"
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                        Rate Per Ton (₹) <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={form.ratePerTon || ''}
+                                        onChange={e => setForm(f => ({ ...f, ratePerTon: parseFloat(e.target.value) || 0 }))}
+                                        placeholder="Enter rate per ton"
+                                        className="form-input font-bold"
+                                        step="0.01"
+                                        min="0"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                        Received Qty (MT)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={form.receivedQty || ''}
+                                        onChange={e => setForm(f => ({ ...f, receivedQty: parseFloat(e.target.value) || 0 }))}
+                                        placeholder="MT received"
+                                        className="form-input font-bold"
+                                        step="0.001"
+                                        min="0"
+                                    />
+                                </div>
                             </div>
 
                             <div>
@@ -361,7 +414,7 @@ const PurchasesPage = () => {
                                     onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                                     rows={2}
                                     placeholder="Optional notes"
-                                    className="form-textarea"
+                                    className="form-textarea font-medium"
                                 />
                             </div>
 
@@ -370,7 +423,7 @@ const PurchasesPage = () => {
                                     Cancel
                                 </button>
                                 <button type="submit" disabled={saving} className="btn btn-primary flex-1 py-2.5 font-bold">
-                                    {saving ? 'Creating...' : 'Create PO'}
+                                    {saving ? 'Saving...' : (editingPoId ? 'Update PO' : 'Create PO')}
                                 </button>
                             </div>
                         </form>
