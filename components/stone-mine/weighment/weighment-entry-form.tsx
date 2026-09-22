@@ -4,6 +4,7 @@ import api from '@/utils/api';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
 
+
 interface ProductType {
     _id: string;
     name: string;
@@ -430,34 +431,49 @@ const WeighmentEntryForm = () => {
                     )}
                 </div>
 
-                {/* First Weight Capture Input */}
-                <div className={`p-4 rounded-xl border-2 ${
+                {/* Manual Weight Entry Section */}
+                <div className={`p-5 rounded-2xl border-2 transition-all ${
                     form.firstWeighType === 'Loaded Vehicle (Gross)'
-                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-400 dark:border-blue-600'
-                        : 'bg-amber-50 dark:bg-amber-900/20 border-amber-400 dark:border-amber-600'
+                        ? 'bg-blue-50/70 dark:bg-blue-950/20 border-blue-400 dark:border-blue-600'
+                        : 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-400 dark:border-amber-600'
                 }`}>
-                    <label className={`block text-sm font-black uppercase mb-2 ${
-                        form.firstWeighType === 'Loaded Vehicle (Gross)' ? 'text-blue-800 dark:text-blue-300' : 'text-amber-800 dark:text-amber-300'
-                    }`}>
-                        {form.firstWeighType === 'Loaded Vehicle (Gross)'
-                            ? '🚚 First Weight — Gross Weight (பார எடை - MT)'
-                            : '🚛 First Weight — Tare Weight (வெற்று எடை - MT)'} <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="number"
-                        name="initialWeight"
-                        value={form.initialWeight}
-                        onChange={handleChange}
-                        placeholder="Enter weight in Metric Tons (e.g. 32.450)"
-                        step="0.001"
-                        min="0"
-                        className={`form-input text-2xl font-black ${
-                            form.firstWeighType === 'Loaded Vehicle (Gross)' ? 'text-blue-700 dark:text-blue-300' : 'text-amber-700 dark:text-amber-300'
-                        }`}
-                        required
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                        Weighbridge Reading in Metric Tons (MT). 2nd weighment will occur after Loading/Unloading.
+                    <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                        <label className={`block text-sm font-black uppercase tracking-wide ${
+                            form.firstWeighType === 'Loaded Vehicle (Gross)' ? 'text-blue-900 dark:text-blue-200' : 'text-amber-900 dark:text-amber-200'
+                        }`}>
+                            {form.firstWeighType === 'Loaded Vehicle (Gross)'
+                                ? '🚚 1st Weight — Gross Weight (பார எடை - MT)'
+                                : '🚛 1st Weight — Tare Weight (வெற்று எடை - MT)'} <span className="text-red-500">*</span>
+                        </label>
+                        {form.initialWeight && !isNaN(parseFloat(form.initialWeight)) && parseFloat(form.initialWeight) > 0 && (
+                            <span className="text-xs font-mono font-bold bg-white dark:bg-gray-800 px-2.5 py-1 rounded-full border border-gray-300 dark:border-gray-600 shadow-sm text-gray-700 dark:text-gray-300">
+                                = {Math.round(parseFloat(form.initialWeight) * 1000).toLocaleString('en-IN')} kg
+                            </span>
+                        )}
+                    </div>
+                    <div className="relative">
+                        <input
+                            type="number"
+                            name="initialWeight"
+                            value={form.initialWeight}
+                            onChange={handleChange}
+                            placeholder="0.000"
+                            step="0.001"
+                            min="0"
+                            className={`form-input text-3xl font-black font-mono tracking-wider h-14 pl-4 pr-16 rounded-xl border-2 ${
+                                form.firstWeighType === 'Loaded Vehicle (Gross)' 
+                                    ? 'text-blue-700 dark:text-blue-300 focus:border-blue-600' 
+                                    : 'text-amber-700 dark:text-amber-300 focus:border-amber-600'
+                            }`}
+                            autoFocus
+                            required
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-bold text-gray-400 text-sm pointer-events-none">
+                            MT
+                        </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        Enter 1st weighment reading in <b>Metric Tons (MT)</b>. 2nd weighment will be entered after Loading/Unloading.
                     </p>
                 </div>
 

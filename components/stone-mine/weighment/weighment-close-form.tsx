@@ -4,6 +4,7 @@ import api from '@/utils/api';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
 
+
 interface Slip {
     _id: string;
     slipNumber: string;
@@ -22,6 +23,11 @@ interface Slip {
     ratePerTon?: number;
     gstPercentage?: number;
     paymentType?: string;
+    challanNo?: string;
+    volumeM3?: number;
+    moisturePercentage?: number;
+    operatorName?: string;
+    purpose?: string;
 }
 
 const WeighmentCloseForm = () => {
@@ -327,21 +333,36 @@ const WeighmentCloseForm = () => {
 
                     {/* Second Weight & Net Weight */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-300 dark:border-amber-700">
-                            <label className="block text-xs font-black uppercase text-amber-800 dark:text-amber-300 mb-2">
-                                {isInitialTare ? '🚚 Gross Weight (Loaded Vehicle MT)' : '🚛 Tare Weight (Empty Vehicle MT)'} <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="number"
-                                value={secondWeight}
-                                onChange={e => setSecondWeight(e.target.value)}
-                                placeholder="Enter 2nd weight reading in MT"
-                                step="0.001"
-                                min="0"
-                                className="form-input text-xl font-black text-amber-700 dark:text-amber-300"
-                                autoFocus
-                                required
-                            />
+                        <div className="p-4 bg-amber-50/80 dark:bg-amber-950/20 rounded-xl border-2 border-amber-300 dark:border-amber-700">
+                            <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                                <label className="block text-xs font-black uppercase tracking-wide text-amber-900 dark:text-amber-200">
+                                    {isInitialTare ? '🚚 2nd Weight — Gross Weight (பார எடை - MT)' : '🚛 2nd Weight — Tare Weight (வெற்று எடை - MT)'} <span className="text-red-500">*</span>
+                                </label>
+                                {secondWeight && !isNaN(parseFloat(secondWeight)) && parseFloat(secondWeight) > 0 && (
+                                    <span className="text-xs font-mono font-bold bg-white dark:bg-gray-800 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-gray-700 shadow-sm text-gray-700 dark:text-gray-300">
+                                        = {Math.round(parseFloat(secondWeight) * 1000).toLocaleString('en-IN')} kg
+                                    </span>
+                                )}
+                            </div>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    value={secondWeight}
+                                    onChange={e => setSecondWeight(e.target.value)}
+                                    placeholder="0.000"
+                                    step="0.001"
+                                    min="0"
+                                    className="form-input text-2xl font-black font-mono tracking-wider h-13 pl-4 pr-16 text-amber-700 dark:text-amber-300 rounded-xl border-2 focus:border-amber-600"
+                                    autoFocus
+                                    required
+                                />
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 font-mono font-bold text-gray-400 text-sm pointer-events-none">
+                                    MT
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">
+                                Enter manual 2nd weighbridge reading in <b>Metric Tons (MT)</b>
+                            </p>
                         </div>
 
                         <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border-2 border-green-400 text-center flex flex-col items-center justify-center">
