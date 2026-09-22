@@ -121,53 +121,79 @@ const WeighmentCloseForm = () => {
     const handleClose = async () => {
         if (!selectedSlip) return;
         if (!secondWeight || secondW <= 0) {
-            return Swal.fire('Error', `Please enter valid ${isInitialTare ? 'gross' : 'tare'} weight`, 'error');
+            return Swal.fire({
+                icon: 'warning',
+                title: 'Weight Required',
+                text: `Please enter valid ${isInitialTare ? 'gross' : 'tare'} weight in Metric Tons (MT)`,
+                customClass: {
+                    popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                    confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-bold px-5 py-2.5 rounded-xl text-xs border-0 cursor-pointer'
+                },
+                buttonsStyling: false
+            });
         }
         if (tare >= gross) {
-            return Swal.fire('Error', 'Tare weight cannot be equal to or greater than gross weight', 'error');
+            return Swal.fire({
+                icon: 'error',
+                title: 'Invalid Tare / Gross Weight',
+                text: 'Tare (empty) weight cannot be equal to or greater than Gross (loaded) weight',
+                customClass: {
+                    popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                    confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-bold px-5 py-2.5 rounded-xl text-xs border-0 cursor-pointer'
+                },
+                buttonsStyling: false
+            });
         }
 
         const isInward = selectedSlip.slipType === 'Inward' || selectedSlip.purpose === 'Purchase';
 
         const confirm = await Swal.fire({
-            title: 'Confirm 2nd Weight Entry',
             html: `
-                <div style="font-family: system-ui, -apple-system, sans-serif; text-align: left; padding: 2px;">
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-top: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
-                            <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">SUMMARY SLIP</span>
-                            <span style="background: #eff6ff; color: #2563eb; font-weight: 800; font-family: monospace; font-size: 13px; padding: 2px 8px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                <div style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 2px;">
+                    <div style="width: 58px; height: 58px; border-radius: 50%; background: #fdf5e8; border: 2px solid #e79b21; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin: 4px auto 12px auto; box-shadow: 0 4px 14px rgba(231,155,33,0.22);">
+                        ⚖️
+                    </div>
+                    <h3 style="font-size: 20px; font-weight: 900; color: #032237; margin: 0 0 4px 0; letter-spacing: -0.2px;">Confirm 2nd Weight Entry</h3>
+                    <p style="font-size: 12px; color: #78829d; margin: 0 0 14px 0; font-weight: 600;">இரண்டாம் எடை சரிபார்த்து உறுதி செய்யவும்</p>
+
+                    <div style="background: #ffffff; border: 1.5px solid #e79b21; border-radius: 14px; padding: 16px; box-shadow: 0 4px 18px rgba(231,155,33,0.08); text-align: left;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #f5d49e; padding-bottom: 10px; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <span style="font-size: 13px;">📄</span>
+                                <span style="font-size: 11px; font-weight: 900; color: #032237; text-transform: uppercase; letter-spacing: 0.5px;">SUMMARY SLIP</span>
+                            </div>
+                            <span style="background: #fdf5e8; color: #e79b21; font-weight: 900; font-family: monospace; font-size: 13px; padding: 3px 10px; border-radius: 8px; border: 1px solid #f5d49e;">
                                 ${selectedSlip.slipNumber}
                             </span>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-                            <div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                            <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                 <span style="color: #64748b; font-size: 10px; display: block; font-weight: 700; text-transform: uppercase;">Vehicle No</span>
-                                <b style="font-size: 13px; font-family: monospace; color: #0f172a;">${selectedSlip.vehicleNumber}</b>
+                                <b style="font-size: 13px; font-family: monospace; color: #032237;">${selectedSlip.vehicleNumber}</b>
                             </div>
-                            <div>
+                            <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                 <span style="color: #64748b; font-size: 10px; display: block; font-weight: 700; text-transform: uppercase;">Party Name</span>
-                                <b style="color: #1e293b;">${selectedSlip.partyName || '—'}</b>
+                                <b style="color: #032237; font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${selectedSlip.partyName || '—'}</b>
                             </div>
-                            <div>
+                            <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                 <span style="color: #64748b; font-size: 10px; display: block; font-weight: 700; text-transform: uppercase;">Gross / Tare</span>
-                                <b style="color: #1e293b;">${gross} MT / ${tare} MT</b>
+                                <b style="color: #032237; font-size: 12px; font-family: monospace;">${gross.toFixed(3)} MT / ${tare.toFixed(3)} MT</b>
                             </div>
-                            <div>
-                                <span style="color: #64748b; font-size: 10px; display: block; font-weight: 700; text-transform: uppercase;">Net Weight</span>
-                                <b style="color: #2563eb; font-size: 14px;">${netWeight} MT</b>
+                            <div style="background: #fdf5e8; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #f5d49e;">
+                                <span style="color: #b45309; font-size: 10px; display: block; font-weight: 800; text-transform: uppercase;">Net Weight</span>
+                                <b style="color: #e79b21; font-size: 15px; font-weight: 900; font-family: monospace;">${netWeight.toFixed(3)} MT</b>
                             </div>
                         </div>
                     </div>
                 </div>
             `,
-            icon: 'question',
             showCancelButton: true,
             confirmButtonText: '✅ Complete 2nd Weighment',
             cancelButtonText: 'Cancel',
             customClass: {
-                confirmButton: 'btn bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 mx-1 rounded-xl text-xs shadow-md',
-                cancelButton: 'btn bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 font-bold px-4 py-2.5 mx-1 rounded-xl text-xs border border-gray-300'
+                popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-extrabold px-6 py-2.5 mx-1.5 rounded-xl text-xs shadow-md shadow-[#e79b21]/30 transition-all border-0 cursor-pointer',
+                cancelButton: 'btn bg-[#032237]/10 hover:bg-[#032237]/20 text-[#032237] dark:text-gray-200 font-bold px-5 py-2.5 mx-1.5 rounded-xl text-xs border border-[#032237]/20 transition-all cursor-pointer'
             },
             buttonsStyling: false
         });
@@ -197,16 +223,19 @@ const WeighmentCloseForm = () => {
             await api.put(`/weighment/${selectedSlip._id}/close`, payload);
 
             await Swal.fire({
-                icon: 'success',
-                title: '2nd Weighment Completed!',
                 html: `
                     <div style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 4px;">
-                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin-top: 8px;">
-                            <div style="font-size: 32px; font-weight: 900; color: #16a34a; font-family: monospace;">${netWeight} MT</div>
-                            <div style="color: #15803d; font-weight: 700; font-size: 13px; margin-top: 2px;">Net Delivered Weight</div>
+                        <div style="width: 58px; height: 58px; border-radius: 50%; background: #fdf5e8; border: 2px solid #e79b21; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 12px auto; box-shadow: 0 4px 14px rgba(231,155,33,0.22);">
+                            🎉
                         </div>
-                        <p style="margin-top: 12px; font-size: 13px; color: #475569;">
-                            Slip <b style="font-family: monospace; color: #0f172a;">${selectedSlip.slipNumber}</b> closed successfully. Details synced to Purchases/Sales.
+                        <h3 style="font-size: 20px; font-weight: 900; color: #032237; margin: 0 0 4px 0;">2nd Weighment Completed!</h3>
+                        <p style="font-size: 12px; color: #78829d; margin: 0 0 14px 0; font-weight: 600;">இரண்டாம் எடை வெற்றிகரமாக முடிந்தது</p>
+                        <div style="background: linear-gradient(135deg, #fdf5e8 0%, #fff7ed 100%); border: 1.5px solid #e79b21; border-radius: 14px; padding: 16px; margin-top: 6px; box-shadow: 0 4px 16px rgba(231,155,33,0.12);">
+                            <div style="font-size: 34px; font-weight: 900; color: #e79b21; font-family: monospace;">${netWeight.toFixed(3)} MT</div>
+                            <div style="color: #032237; font-weight: 800; font-size: 12px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Net Delivered Weight (நிகர எடை)</div>
+                        </div>
+                        <p style="margin-top: 14px; font-size: 13px; color: #475569;">
+                            Slip <b style="font-family: monospace; color: #032237; background: #fdf5e8; padding: 3px 8px; border-radius: 6px; border: 1px solid #f5d49e;">${selectedSlip.slipNumber}</b> closed successfully. Details synced to Purchases/Sales.
                         </p>
                     </div>
                 `,
@@ -214,8 +243,9 @@ const WeighmentCloseForm = () => {
                 confirmButtonText: '🖨️ Print Slip',
                 cancelButtonText: 'Done',
                 customClass: {
-                    confirmButton: 'btn bg-green-600 hover:bg-green-700 text-white font-bold px-5 py-2.5 mx-1 rounded-xl text-xs shadow-md',
-                    cancelButton: 'btn bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 font-bold px-5 py-2.5 mx-1 rounded-xl text-xs border border-gray-300'
+                    popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                    confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-extrabold px-6 py-2.5 mx-1.5 rounded-xl text-xs shadow-md shadow-[#e79b21]/30 transition-all border-0 cursor-pointer',
+                    cancelButton: 'btn bg-[#032237] hover:bg-[#053556] text-white font-bold px-5 py-2.5 mx-1.5 rounded-xl text-xs transition-all border-0 cursor-pointer'
                 },
                 buttonsStyling: false
             }).then(r => {
@@ -229,7 +259,16 @@ const WeighmentCloseForm = () => {
             setRemarks('');
             fetchOpenSlips();
         } catch (err: any) {
-            Swal.fire('Error', err.response?.data?.error || 'Failed to complete weighment', 'error');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: err.response?.data?.error || 'Failed to complete weighment',
+                customClass: {
+                    popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                    confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-bold px-5 py-2.5 rounded-xl text-xs border-0 cursor-pointer'
+                },
+                buttonsStyling: false
+            });
         } finally {
             setLoading(false);
         }

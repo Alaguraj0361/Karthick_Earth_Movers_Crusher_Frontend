@@ -150,9 +150,42 @@ const WeighmentEntryForm = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.vehicleNumber.trim()) return Swal.fire('Error', 'Vehicle number is required', 'error');
-        if (form.firstWeighType === 'Loaded Vehicle (Gross)' && !form.material) return Swal.fire('Error', 'Please select material', 'error');
-        if (!form.initialWeight || parseFloat(form.initialWeight) <= 0) return Swal.fire('Error', 'Please enter weight', 'error');
+        if (!form.vehicleNumber.trim()) {
+            return Swal.fire({
+                icon: 'warning',
+                title: 'Vehicle Number Required',
+                text: 'Please enter a valid vehicle registration number',
+                customClass: {
+                    popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                    confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-bold px-5 py-2.5 rounded-xl text-xs border-0 cursor-pointer'
+                },
+                buttonsStyling: false
+            });
+        }
+        if (form.firstWeighType === 'Loaded Vehicle (Gross)' && !form.material) {
+            return Swal.fire({
+                icon: 'warning',
+                title: 'Material Required',
+                text: 'Please select an aggregate material for loaded vehicle weighment',
+                customClass: {
+                    popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                    confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-bold px-5 py-2.5 rounded-xl text-xs border-0 cursor-pointer'
+                },
+                buttonsStyling: false
+            });
+        }
+        if (!form.initialWeight || parseFloat(form.initialWeight) <= 0) {
+            return Swal.fire({
+                icon: 'warning',
+                title: 'Weight Required',
+                text: 'Please enter a valid 1st weighment reading in Metric Tons (MT)',
+                customClass: {
+                    popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                    confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-bold px-5 py-2.5 rounded-xl text-xs border-0 cursor-pointer'
+                },
+                buttonsStyling: false
+            });
+        }
 
         setLoading(true);
         try {
@@ -170,44 +203,53 @@ const WeighmentEntryForm = () => {
             const slip = res.data.data;
 
             await Swal.fire({
-                icon: 'success',
-                title: isEmptyEntry ? '🚛 Step 1 Empty Entry Created!' : '🚚 Step 1 Gross Entry Created!',
                 html: `
-                    <div style="font-family: system-ui, -apple-system, sans-serif; text-align: left; padding: 2px;">
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-top: 6px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
-                                <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; tracking: 0.5px;">WEIGHMENT SLIP</span>
-                                <span style="background: #eff6ff; color: #2563eb; font-weight: 800; font-family: monospace; font-size: 13px; padding: 2px 8px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                    <div style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 2px;">
+                        <div style="width: 58px; height: 58px; border-radius: 50%; background: #fdf5e8; border: 2px solid #e79b21; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin: 4px auto 12px auto; box-shadow: 0 4px 14px rgba(231,155,33,0.22);">
+                            ${isEmptyEntry ? '🚛' : '🚚'}
+                        </div>
+                        <h3 style="font-size: 20px; font-weight: 900; color: #032237; margin: 0 0 4px 0; letter-spacing: -0.2px;">
+                            ${isEmptyEntry ? 'Step 1 Empty Tare Entry Created!' : 'Step 1 Gross Entry Created!'}
+                        </h3>
+                        <p style="font-size: 12px; color: #78829d; margin: 0 0 14px 0; font-weight: 600;">முதல் எடை பதிவு வெற்றிகரமாக உருவாக்கப்பட்டது</p>
+
+                        <div style="background: #ffffff; border: 1.5px solid #e79b21; border-radius: 14px; padding: 16px; box-shadow: 0 4px 18px rgba(231,155,33,0.08); text-align: left;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #f5d49e; padding-bottom: 10px; margin-bottom: 12px;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 13px;">📄</span>
+                                    <span style="font-size: 11px; font-weight: 900; color: #032237; text-transform: uppercase; letter-spacing: 0.5px;">WEIGHMENT SLIP</span>
+                                </div>
+                                <span style="background: #fdf5e8; color: #e79b21; font-weight: 900; font-family: monospace; font-size: 13px; padding: 3px 10px; border-radius: 8px; border: 1px solid #f5d49e;">
                                     ${slip.slipNumber}
                                 </span>
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-                                <div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                                <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                     <span style="color: #64748b; font-size: 10px; display: block; font-weight: 700; text-transform: uppercase;">Vehicle No</span>
-                                    <b style="font-size: 13px; font-family: monospace; color: #0f172a;">${slip.vehicleNumber}</b>
+                                    <b style="font-size: 13px; font-family: monospace; color: #032237;">${slip.vehicleNumber}</b>
                                 </div>
-                                <div>
+                                <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                     <span style="color: #64748b; font-size: 10px; display: block; font-weight: 700; text-transform: uppercase;">Direction</span>
-                                    <b style="color: ${form.slipType === 'Inward' ? '#16a34a' : '#ea580c'};">${slip.slipType} (${form.slipType === 'Inward' ? 'Supplier' : 'Customer'})</b>
+                                    <b style="color: ${form.slipType === 'Inward' ? '#16a34a' : '#e79b21'}; font-weight: 800;">${slip.slipType} (${form.slipType === 'Inward' ? 'Supplier' : 'Customer'})</b>
                                 </div>
-                                <div>
+                                <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                     <span style="color: #64748b; font-size: 10px; display: block; font-weight: 700; text-transform: uppercase;">Party Name</span>
-                                    <b style="color: #1e293b;">${slip.partyName || '—'}</b>
+                                    <b style="color: #032237; font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${slip.partyName || '—'}</b>
                                 </div>
-                                <div>
+                                <div style="background: #f8fafc; padding: 8px 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
                                     <span style="color: #64748b; font-size: 10px; display: block; font-weight: 700; text-transform: uppercase;">Material</span>
-                                    <b style="color: #1e293b;">${products.find(p => p._id === form.material)?.name || '—'}</b>
+                                    <b style="color: #032237; font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${products.find(p => p._id === form.material)?.name || '—'}</b>
                                 </div>
                             </div>
-                            <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 11px; font-weight: 700; color: #475569;">1st Weight Captured:</span>
-                                <span style="font-size: 14px; font-weight: 900; color: #2563eb; font-family: monospace;">
-                                    ${form.initialWeight} MT <span style="font-size: 10px; font-weight: 700; color: #64748b;">(${isEmptyEntry ? 'Empty Tare' : 'Loaded Gross'})</span>
+                            <div style="background: #fdf5e8; border: 1.5px solid #f5d49e; border-radius: 10px; padding: 10px 14px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 11px; font-weight: 800; color: #032237; text-transform: uppercase;">1st Weight Captured:</span>
+                                <span style="font-size: 16px; font-weight: 900; color: #e79b21; font-family: monospace;">
+                                    ${form.initialWeight} MT <span style="font-size: 11px; font-weight: 700; color: #64748b;">(${isEmptyEntry ? 'Empty Tare' : 'Loaded Gross'})</span>
                                 </span>
                             </div>
                         </div>
-                        <div style="text-align: center; margin-top: 12px;">
-                            <span style="background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 9999px; border: 1px solid #fde68a; display: inline-block;">
+                        <div style="text-align: center; margin-top: 14px;">
+                            <span style="background: #fdf5e8; color: #b45309; font-size: 11px; font-weight: 800; padding: 5px 14px; border-radius: 9999px; border: 1px solid #fde68a; display: inline-block;">
                                 ⏳ STEP 1 OPEN — Awaiting 2nd Weight
                             </span>
                         </div>
@@ -219,9 +261,10 @@ const WeighmentEntryForm = () => {
                 denyButtonText: '➡️ Step 2 (Close)',
                 cancelButtonText: '📋 View Register',
                 customClass: {
-                    confirmButton: 'btn bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 mx-1 rounded-xl text-xs shadow-md',
-                    denyButton: 'btn bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 py-2 mx-1 rounded-xl text-xs shadow-md',
-                    cancelButton: 'btn bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 font-bold px-4 py-2 mx-1 rounded-xl text-xs border border-gray-300'
+                    popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                    confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-extrabold px-5 py-2.5 mx-1 rounded-xl text-xs shadow-md shadow-[#e79b21]/30 transition-all border-0 cursor-pointer',
+                    denyButton: 'btn bg-[#032237] hover:bg-[#053556] text-white font-bold px-5 py-2.5 mx-1 rounded-xl text-xs transition-all border-0 cursor-pointer',
+                    cancelButton: 'btn bg-[#032237]/10 hover:bg-[#032237]/20 text-[#032237] dark:text-gray-200 font-bold px-4 py-2.5 mx-1 rounded-xl text-xs border border-[#032237]/20 transition-all cursor-pointer'
                 },
                 buttonsStyling: false
             }).then(result => {
@@ -235,7 +278,16 @@ const WeighmentEntryForm = () => {
                 }
             });
         } catch (err: any) {
-            Swal.fire('Error', err.response?.data?.error || 'Failed to create weighment slip', 'error');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: err.response?.data?.error || 'Failed to create weighment slip',
+                customClass: {
+                    popup: 'rounded-2xl p-6 border border-[#f5d49e]/50 shadow-2xl',
+                    confirmButton: 'btn bg-[#e79b21] hover:bg-[#cf8716] text-white font-bold px-5 py-2.5 rounded-xl text-xs border-0 cursor-pointer'
+                },
+                buttonsStyling: false
+            });
         } finally {
             setLoading(false);
         }

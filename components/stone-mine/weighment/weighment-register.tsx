@@ -35,11 +35,26 @@ const WeighmentRegister = () => {
     const [filters, setFilters] = useState({
         slipType: '',
         slipStatus: '',
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0],
+        startDate: '',
+        endDate: '',
         search: '',
     });
     const [summary, setSummary] = useState({ inward: 0, outward: 0, open: 0 });
+
+    const setTodayFilter = () => {
+        const today = new Date().toISOString().split('T')[0];
+        setFilters(f => ({ ...f, startDate: today, endDate: today }));
+    };
+
+    const clearFilters = () => {
+        setFilters({
+            slipType: '',
+            slipStatus: '',
+            startDate: '',
+            endDate: '',
+            search: '',
+        });
+    };
 
     const fetchSlips = useCallback(async () => {
         setLoading(true);
@@ -114,15 +129,56 @@ const WeighmentRegister = () => {
             </div>
 
             {/* Filters */}
-            <div className="panel">
+            <div className="panel space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                            Filter Register
+                        </span>
+                        {(!filters.startDate && !filters.endDate && !filters.slipType && !filters.slipStatus && !filters.search) ? (
+                            <span className="badge bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300 text-[11px] font-bold">
+                                🌐 Full Data (All Slips)
+                            </span>
+                        ) : (
+                            <span className="badge bg-[#fdf5e8] text-[#e79b21] border border-[#f5d49e] text-[11px] font-bold">
+                                🔍 Filter Active
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={setTodayFilter}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
+                                filters.startDate === new Date().toISOString().split('T')[0] && filters.endDate === new Date().toISOString().split('T')[0]
+                                    ? 'bg-[#e79b21] text-white border-[#e79b21] shadow-sm'
+                                    : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                            }`}
+                        >
+                            📅 Today
+                        </button>
+                        {(filters.startDate || filters.endDate || filters.slipType || filters.slipStatus || filters.search) && (
+                            <button
+                                type="button"
+                                onClick={clearFilters}
+                                className="px-3 py-1.5 text-xs font-bold rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition"
+                            >
+                                ✕ Clear Filters (Show Full Data)
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <input
                         type="date" name="startDate" value={filters.startDate}
                         onChange={handleFilterChange} className="form-input text-sm" placeholder="From Date"
+                        title="From Date (Leave empty for all)"
                     />
                     <input
                         type="date" name="endDate" value={filters.endDate}
                         onChange={handleFilterChange} className="form-input text-sm" placeholder="To Date"
+                        title="To Date (Leave empty for all)"
                     />
                     <select name="slipType" value={filters.slipType} onChange={handleFilterChange} className="form-select text-sm font-semibold">
                         <option value="">All Types</option>
