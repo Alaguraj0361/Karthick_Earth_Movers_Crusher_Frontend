@@ -44,9 +44,13 @@ const SummaryReports = () => {
 
     const getSeriesData = (data: any[], type: string) => {
         const series = new Array(12).fill(0);
-        data.forEach(item => {
-            series[item._id - 1] = item.total;
-        });
+        if (Array.isArray(data)) {
+            data.forEach(item => {
+                if (item && item._id >= 1 && item._id <= 12) {
+                    series[item._id - 1] = Number(item.total) || 0;
+                }
+            });
+        }
         return series;
     };
 
@@ -65,7 +69,12 @@ const SummaryReports = () => {
             x: { format: 'MMM' },
         },
         colors: ['#00ab55', '#e7515a'],
-        legend: { position: 'top' }
+        legend: {
+            position: 'top',
+            onItemHover: {
+                highlightDataSeries: false,
+            }
+        }
     };
 
     const exportToExcel = () => {

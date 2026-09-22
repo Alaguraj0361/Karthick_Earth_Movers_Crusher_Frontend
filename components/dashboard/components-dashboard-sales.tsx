@@ -205,6 +205,9 @@ const ComponentsDashboardSales = () => {
                 fontSize: '16px',
                 markers: { width: 10, height: 10, offsetX: -2 },
                 itemMargin: { horizontal: 10, vertical: 5 },
+                onItemHover: {
+                    highlightDataSeries: false,
+                },
             },
             tooltip: { marker: { show: true }, x: { show: true } },
             fill: {
@@ -221,15 +224,16 @@ const ComponentsDashboardSales = () => {
     };
 
     //Sales By Category
-    const salesData = data?.salesByCategory || [];
+    const rawSalesData = data?.salesByCategory || [];
+    const salesData = Array.isArray(rawSalesData) ? rawSalesData.filter((d: any) => d && (d.total > 0 || d._id)) : [];
     const salesByCategory: any = {
-        series: salesData.length > 0 ? salesData.map((d: any) => d.total ?? 0) : [0],
+        series: salesData.length > 0 ? salesData.map((d: any) => Number(d.total) || 0) : [1],
         options: {
             chart: { type: 'donut', height: 460, fontFamily: 'Nunito, sans-serif' },
             dataLabels: { enabled: false },
             stroke: { show: true, width: 15, colors: isDark ? '#0e1726' : '#fff' },
             colors: ['#e2a03f', '#5c1ac3', '#e7515a', '#2196f3', '#00ab55'],
-            labels: salesData.length > 0 ? salesData.map((d: any) => d._id || 'Unknown') : ['No Data'],
+            labels: salesData.length > 0 ? salesData.map((d: any) => String(d._id || 'Unknown')) : ['No Data'],
             legend: {
                 position: 'bottom',
                 horizontalAlign: 'center',
@@ -237,6 +241,12 @@ const ComponentsDashboardSales = () => {
                 markers: { width: 10, height: 10, offsetX: -2 },
                 height: 50,
                 offsetY: 20,
+                onItemHover: {
+                    highlightDataSeries: false,
+                },
+                onItemClick: {
+                    toggleDataSeries: true,
+                },
             },
             plotOptions: {
                 pie: {

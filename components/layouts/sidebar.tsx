@@ -257,74 +257,77 @@ const Sidebar = () => {
                                         </AnimateHeight>
                                     </li>
 
-                                    {/* 3. Transport Management */}
-                                    <li className="menu nav-item">
-                                        <button type="button" className={`${currentMenu === 'transport-mgmt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('transport-mgmt')}>
-                                            <div className="flex items-center">
-                                                <IconMenuScrumboard className="shrink-0 group-hover:!text-primary" />
-                                                <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Transport Management</span>
-                                            </div>
+                                    {/* Transport Management & Transport Vendor Management (Hidden as requested) */}
+                                    {false && (
+                                        <>
+                                            {/* 3. Transport Management */}
+                                            <li className="menu nav-item">
+                                                <button type="button" className={`${currentMenu === 'transport-mgmt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('transport-mgmt')}>
+                                                    <div className="flex items-center">
+                                                        <IconMenuScrumboard className="shrink-0 group-hover:!text-primary" />
+                                                        <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Transport Management</span>
+                                                    </div>
 
-                                            <div className={currentMenu !== 'transport-mgmt' ? '-rotate-90 rtl:rotate-90' : ''}>
-                                                <IconCaretDown />
-                                            </div>
-                                        </button>
+                                                    <div className={currentMenu !== 'transport-mgmt' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                                        <IconCaretDown />
+                                                    </div>
+                                                </button>
 
-                                        <AnimateHeight duration={300} height={currentMenu === 'transport-mgmt' ? 'auto' : 0}>
-                                            <ul className="sub-menu text-gray-500">
-                                                <li>
-                                                    <Link href="/transport/trips">Vehicle Trip Management</Link>
+                                                <AnimateHeight duration={300} height={currentMenu === 'transport-mgmt' ? 'auto' : 0}>
+                                                    <ul className="sub-menu text-gray-500">
+                                                        <li>
+                                                            <Link href="/transport/trips">Vehicle Trip Management</Link>
+                                                        </li>
+                                                        {isOwnerOrManager && (
+                                                            <>
+                                                                <li>
+                                                                    <Link href="/transport/driver-payments">Driver Payment</Link>
+                                                                </li>
+                                                                <li>
+                                                                    <Link href="/transport/driver-advance">Driver Advance</Link>
+                                                                </li>
+                                                            </>
+                                                        )}
+                                                    </ul>
+                                                </AnimateHeight>
+                                            </li>
+
+                                            {/* 4. Transport Vendor Management */}
+                                            {isOwnerOrManager && (
+                                                <li className="menu nav-item">
+                                                    <button type="button" className={`${currentMenu === 'vendor-mgmt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('vendor-mgmt')}>
+                                                        <div className="flex items-center">
+                                                            <IconMenuUsers className="shrink-0 group-hover:!text-primary" />
+                                                            <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Transport Vendor Manage</span>
+                                                        </div>
+
+                                                        <div className={currentMenu !== 'vendor-mgmt' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                                            <IconCaretDown />
+                                                        </div>
+                                                    </button>
+
+                                                    <AnimateHeight duration={300} height={currentMenu === 'vendor-mgmt' ? 'auto' : 0}>
+                                                        <ul className="sub-menu text-gray-500">
+                                                            <li>
+                                                                <Link href="/vendors/transport">Transport Vendors</Link>
+                                                            </li>
+                                                            <li>
+                                                                <Link href="/vendors/advance">Vendor Advance</Link>
+                                                            </li>
+                                                            <li>
+                                                                <Link href="/vendors/payments">Vendor Payment</Link>
+                                                            </li>
+                                                            <li>
+                                                                <Link href="/vendors/trip-search">Trip Search & Export</Link>
+                                                            </li>
+                                                            <li>
+                                                                <Link href="/vendors/outstanding">Vendor Pending Payment</Link>
+                                                            </li>
+                                                        </ul>
+                                                    </AnimateHeight>
                                                 </li>
-                                                {isOwnerOrManager && (
-                                                    <>
-                                                        <li>
-                                                            <Link href="/transport/driver-payments">Driver Payment</Link>
-                                                        </li>
-                                                        <li>
-                                                            <Link href="/transport/driver-advance">Driver Advance</Link>
-                                                        </li>
-                                                    </>
-                                                )}
-                                            </ul>
-                                        </AnimateHeight>
-                                    </li>
-
-                                    {/* 4. Transport Vendor Management */}
-                                    {isOwnerOrManager && (
-                                        <li className="menu nav-item">
-                                            <button type="button" className={`${currentMenu === 'vendor-mgmt' ? 'active' : ''} nav-link group w-full`} onClick={() => toggleMenu('vendor-mgmt')}>
-                                                <div className="flex items-center">
-                                                    <IconMenuUsers className="shrink-0 group-hover:!text-primary" />
-                                                    <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Transport Vendor Manage</span>
-                                                </div>
-
-                                                <div className={currentMenu !== 'vendor-mgmt' ? '-rotate-90 rtl:rotate-90' : ''}>
-                                                    <IconCaretDown />
-                                                </div>
-                                            </button>
-
-                                            <AnimateHeight duration={300} height={currentMenu === 'vendor-mgmt' ? 'auto' : 0}>
-                                                <ul className="sub-menu text-gray-500">
-
-                                                    <li>
-                                                        <Link href="/vendors/transport">Transport Vendors</Link>
-                                                    </li>
-
-                                                    <li>
-                                                        <Link href="/vendors/advance">Vendor Advance</Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link href="/vendors/payments">Vendor Payment</Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link href="/vendors/trip-search">Trip Search & Export</Link>
-                                                    </li>
-                                                    <li>
-                                                        <Link href="/vendors/outstanding">Vendor Pending Payment</Link>
-                                                    </li>
-                                                </ul>
-                                            </AnimateHeight>
-                                        </li>
+                                            )}
+                                        </>
                                     )}
 
                                     {/* 4. Labour Management */}
@@ -399,15 +402,17 @@ const Sidebar = () => {
                                     </li>
 
 
-                                    {/* Rentals */}
-                                    <li className="nav-item">
-                                        <Link href="/rentals" className="group">
-                                            <div className="flex items-center">
-                                                <IconMenuCalendar className="shrink-0 group-hover:!text-primary" />
-                                                <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Rental Management</span>
-                                            </div>
-                                        </Link>
-                                    </li>
+                                    {/* Rentals (Hidden as requested) */}
+                                    {false && (
+                                        <li className="nav-item">
+                                            <Link href="/rentals" className="group">
+                                                <div className="flex items-center">
+                                                    <IconMenuCalendar className="shrink-0 group-hover:!text-primary" />
+                                                    <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Rental Management</span>
+                                                </div>
+                                            </Link>
+                                        </li>
+                                    )}
 
                                     {isOwner && (
                                         <li className="menu nav-item">
