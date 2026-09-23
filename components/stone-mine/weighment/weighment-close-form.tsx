@@ -23,6 +23,9 @@ interface Slip {
     ratePerTon?: number;
     gstPercentage?: number;
     paymentType?: string;
+    paymentStatus?: string;
+    amountPaid?: number;
+    balanceAmount?: number;
     challanNo?: string;
     volumeM3?: number;
     moisturePercentage?: number;
@@ -92,8 +95,8 @@ const WeighmentCloseForm = () => {
         setSecondWeight('');
         setRatePerTon(slip.ratePerTon ? String(slip.ratePerTon) : (slip.material?.ratePerTon ? String(slip.material.ratePerTon) : '950'));
         setGstPercentage(slip.gstPercentage !== undefined ? String(slip.gstPercentage) : '0');
-        setPaymentType(slip.paymentType || 'Cash');
-        setAmountPaid('');
+        setPaymentType(slip.paymentType || 'Credit');
+        setAmountPaid(slip.amountPaid ? String(slip.amountPaid) : '0');
         setChallanNo(slip.challanNo || '');
         setVolumeM3(slip.volumeM3 ? String(slip.volumeM3) : '');
         setMoisturePercentage(slip.moisturePercentage !== undefined ? String(slip.moisturePercentage) : '0');
@@ -115,8 +118,9 @@ const WeighmentCloseForm = () => {
     const gstAmt = parseFloat(((subtotal * gstPercent) / 100).toFixed(2));
     const grandTotal = parseFloat((subtotal + gstAmt).toFixed(2));
     
-    const paid = paymentType === 'Credit' ? parseFloat(amountPaid || '0') : grandTotal;
+    const paid = parseFloat(amountPaid || '0');
     const balance = Math.max(0, parseFloat((grandTotal - paid).toFixed(2)));
+    const paymentStatus = (paid >= grandTotal && grandTotal > 0) ? 'Paid' : (paid > 0 ? 'Partial' : 'Unpaid');
 
     const handleClose = async () => {
         if (!selectedSlip) return;
@@ -209,7 +213,8 @@ const WeighmentCloseForm = () => {
                 gstPercentage: gstPercent,
                 gstAmount: gstAmt,
                 totalAmount: grandTotal,
-                paymentType,
+                paymentType: paymentType || 'Credit',
+                paymentStatus,
                 amountPaid: paid,
                 balanceAmount: balance,
                 challanNo,
